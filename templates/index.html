@@ -230,6 +230,25 @@
     .expand-btn:hover { border-color: #6b7aff; color: #aaa; }
     .expand-btn.open { border-color: #2a4a2a; color: #4cff91; }
 
+    /* Stakes comparison row */
+    .stake-row {
+      display: flex;
+      gap: 0;
+      margin-top: 10px;
+      border: 1px solid #1e1e26;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .stake-col {
+      flex: 1;
+      padding: 8px 12px;
+      text-align: center;
+    }
+    .stake-col + .stake-col { border-left: 1px solid #1e1e26; }
+    .stake-col-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 3px; font-weight: 700; }
+    .stake-col-amount { font-size: 1.05rem; font-weight: 800; }
+    .stake-col-profit { font-size: 0.7rem; margin-top: 2px; }
+
     /* All markets table */
     table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
     th { text-align: left; color: #555; font-weight: 600; padding: 7px 10px; border-bottom: 1px solid #222; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .05em; }
@@ -414,30 +433,31 @@ function buildVbetCard(v, bankroll, isTopPick = false) {
   const edgeColor = isTopPick ? '#4cff91' : isApprox ? '#a0cc60' : '#4cff91';
   const stakeColor = isTopPick ? '#4cff91' : isApprox ? '#a0cc60' : '#4cff91';
 
-  const topBadge = isTopPick
-    ? `<div class="top-pick-badge">⭐ LEGJOBB FOGADÁS EZEN A MECCSEN</div>`
-    : '';
-  const recLabel = isApprox ? '⅛ Kelly — javasolt tét' : '¼ Kelly — javasolt tét';
+  const fullProfit = Math.round(fullStake * v.best_odds) - fullStake;
+  const topBadge   = isTopPick ? `<div class="top-pick-badge">⭐ LEGJOBB FOGADÁS EZEN A MECCSEN</div>` : '';
+  const recDivisorLabel = isApprox ? '⅛ Kelly' : '¼ Kelly';
 
   return `
     <div class="vbet-card${isTopPick ? ' top-pick' : isApprox ? ' approx' : ''}">
       ${topBadge}
-      <div class="vbet-card-row">
-        <div style="flex:1;min-width:0">
-          <div class="vbet-card-meta">${v.market}${groupTag}${approxTag}</div>
-          <div class="vbet-card-outcome">${v.outcome}</div>
-          <div class="vbet-card-stats">
-            odds: <b style="color:#e8e8e8">${v.best_odds}</b>
-            &nbsp;|&nbsp; modell: <b style="color:#aaa">${v.model_prob}%</b>
-            &nbsp;|&nbsp; Tippmix: <b style="color:#aaa">${v.implied_prob}%</b>
-            &nbsp;|&nbsp; edge: <b style="color:${edgeColor}">+${v.edge_pct}%</b>
-          </div>
+      <div class="vbet-card-meta">${v.market}${groupTag}${approxTag}</div>
+      <div class="vbet-card-outcome">${v.outcome}</div>
+      <div class="vbet-card-stats" style="margin-top:4px">
+        odds: <b style="color:#e8e8e8">${v.best_odds}</b>
+        &nbsp;|&nbsp; modell: <b style="color:#aaa">${v.model_prob}%</b>
+        &nbsp;|&nbsp; Tippmix: <b style="color:#aaa">${v.implied_prob}%</b>
+        &nbsp;|&nbsp; edge: <b style="color:${edgeColor}">+${v.edge_pct}%</b>
+      </div>
+      <div class="stake-row">
+        <div class="stake-col" style="background:#0d0d0f">
+          <div class="stake-col-label" style="color:#444">Teljes Kelly tét</div>
+          <div class="stake-col-amount" style="color:#666">${fullStake.toLocaleString('hu-HU')} Ft</div>
+          <div class="stake-col-profit" style="color:#444">+${fullProfit.toLocaleString('hu-HU')} Ft profit</div>
         </div>
-        <div class="vbet-card-stake">
-          <div style="font-size:0.65rem;color:${stakeColor};margin-bottom:3px;font-weight:700">${recLabel}</div>
-          <div class="vbet-card-ft" style="color:${stakeColor}">${recStake.toLocaleString('hu-HU')} Ft</div>
-          <div style="font-size:0.7rem;color:#444;margin-top:2px">Teljes Kelly: ${fullStake.toLocaleString('hu-HU')} Ft</div>
-          <div style="font-size:0.72rem;color:#555;margin-top:1px">+${recProfit.toLocaleString('hu-HU')} Ft profit</div>
+        <div class="stake-col" style="background:#071a07">
+          <div class="stake-col-label" style="color:${stakeColor}">${recDivisorLabel} — javasolt tét</div>
+          <div class="stake-col-amount" style="color:${stakeColor}">${recStake.toLocaleString('hu-HU')} Ft</div>
+          <div class="stake-col-profit" style="color:${stakeColor}">+${recProfit.toLocaleString('hu-HU')} Ft profit</div>
         </div>
       </div>
     </div>`;
