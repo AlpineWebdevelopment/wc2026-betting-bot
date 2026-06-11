@@ -123,6 +123,48 @@
       margin-bottom: 8px;
     }
 
+    /* Guide panel */
+    .guide-panel {
+      background: #0f1628;
+      border: 1px solid #2a3a5a;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .guide-toggle {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: #6b7aff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 14px 18px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .guide-toggle:hover { color: #a0a8ff; }
+    .guide-body { padding: 0 18px 18px; display: none; }
+    .guide-body.open { display: block; }
+    .guide-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .guide-box {
+      background: #16161e;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .guide-box h4 { font-size: 0.72rem; color: #6b7aff; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+    .guide-row { font-size: 0.8rem; color: #aaa; margin-bottom: 5px; display: flex; align-items: flex-start; gap: 6px; }
+    .guide-row .g-mark { flex-shrink: 0; }
+    .guide-note { font-size: 0.75rem; color: #555; margin-top: 10px; line-height: 1.5; }
+
     /* Value bet action cards */
     .vbet-card {
       background: #0a1a0a;
@@ -131,9 +173,22 @@
       padding: 12px 16px;
       margin-bottom: 8px;
     }
+    .vbet-card.top-pick {
+      background: #071f07;
+      border: 2px solid #4cff91;
+      box-shadow: 0 0 18px rgba(76, 255, 145, 0.18);
+    }
+    .top-pick-badge {
+      font-size: 0.7rem;
+      color: #4cff91;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 9px;
+    }
     .vbet-card.approx {
-      background: #0d100a;
-      border-color: #2a3a1a;
+      background: #161208;
+      border: 1px solid #4a3a0a;
     }
     .vbet-card-row {
       display: flex;
@@ -231,6 +286,42 @@
         <button class="refresh-btn" onclick="loadTippmix()">Tippmix frissítése</button>
       </div>
     </div>
+    <!-- Betting guide -->
+    <div class="guide-panel">
+      <button class="guide-toggle" onclick="toggleGuide()">📖 Mikor és mennyit fogadjak? — útmutató (kattints a megnyitáshoz)</button>
+      <div class="guide-body" id="guide-body">
+        <div class="guide-grid">
+          <div class="guide-box">
+            <h4>✅ Mikor fogadjak?</h4>
+            <div class="guide-row"><span class="g-mark" style="color:#4cff91">●</span><span>Gólpiac, edge <b>≥ 7%</b> → fogadj</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#a0cc60">●</span><span>Szögletek/lesek (~), edge <b>≥ 20%</b> → fogadj (fél összeggel)</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">●</span><span>Edge &lt; 7% (gólok) vagy &lt; 20% (~) → hagyd ki</span></div>
+          </div>
+          <div class="guide-box">
+            <h4>💰 Mennyit fogadjak?</h4>
+            <div class="guide-row"><span class="g-mark">⭐</span><span>Legjobb fogadás: a <b>javasolt tét</b> (¼ Kelly) látható a kártyán</span></div>
+            <div class="guide-row"><span class="g-mark">🟢</span><span>Gólpiac: javasolt tét = Kelly / 4</span></div>
+            <div class="guide-row"><span class="g-mark">🟡</span><span>~becslés: javasolt tét = Kelly / 8</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>Soha ne tedd fel a teljes Kelly összeget</span></div>
+          </div>
+          <div class="guide-box">
+            <h4>⭐ Melyiket válasszam?</h4>
+            <div class="guide-row"><span class="g-mark">1.</span><span>DNB (Döntetlennél visszajár) — döntetlen esetén visszakapod</span></div>
+            <div class="guide-row"><span class="g-mark">2.</span><span>Gólszám O/U — független a győztestől</span></div>
+            <div class="guide-row"><span class="g-mark">3.</span><span>1X2 — ha az edge nagyon magas (&gt;20%)</span></div>
+            <div class="guide-note">Meccsenkénti 1 fogadás — a <b>⭐ LEGJOBB FOGADÁS</b> kártyát nézd.</div>
+          </div>
+          <div class="guide-box">
+            <h4>❌ Mit hagyjak ki?</h4>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>Pontos eredmény (túl kockázatos)</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>Félidő/végeredmény kombók</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>Több korreláló fogadás ugyanazon meccsen (pl. DNB + 1X2 + Hendikep egyszerre)</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>~becslés fogadások 20% edge alatt</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="tippmix-list">
       <div class="empty-state">
         Kattints a "Tippmix frissítése" gombra az élő oddsok betöltéséhez<br>
@@ -311,15 +402,26 @@ function renderTippmixList(data) {
   }
 }
 
-function buildVbetCard(v, bankroll) {
-  const stake    = Math.max(100, Math.round(bankroll * v.kelly_pct / 100 / 100) * 100);
-  const payout   = Math.round(stake * v.best_odds);
-  const profit   = payout - stake;
-  const isApprox = ['Szögletek', 'Statisztika'].includes(v.market_group);
+function buildVbetCard(v, bankroll, isTopPick = false) {
+  const fullStake = Math.max(100, Math.round(bankroll * v.kelly_pct / 100 / 100) * 100);
+  const isApprox  = ['Szögletek', 'Statisztika'].includes(v.market_group);
+  // Recommended stake: ¼ Kelly for goals, ⅛ Kelly for approximations
+  const divisor   = isApprox ? 8 : 4;
+  const recStake  = Math.max(100, Math.round(fullStake / divisor / 100) * 100);
+  const recProfit = Math.round(recStake * v.best_odds) - recStake;
   const approxTag = isApprox ? '<span class="approx-tag">~becslés</span>' : '';
   const groupTag  = v.market_group ? `<span style="font-size:0.68rem;color:#444;margin-left:6px">[${v.market_group}]</span>` : '';
+  const edgeColor = isTopPick ? '#4cff91' : isApprox ? '#a0cc60' : '#4cff91';
+  const stakeColor = isTopPick ? '#4cff91' : isApprox ? '#a0cc60' : '#4cff91';
+
+  const topBadge = isTopPick
+    ? `<div class="top-pick-badge">⭐ LEGJOBB FOGADÁS EZEN A MECCSEN</div>`
+    : '';
+  const recLabel = isApprox ? '⅛ Kelly — javasolt tét' : '¼ Kelly — javasolt tét';
+
   return `
-    <div class="vbet-card${isApprox ? ' approx' : ''}">
+    <div class="vbet-card${isTopPick ? ' top-pick' : isApprox ? ' approx' : ''}">
+      ${topBadge}
       <div class="vbet-card-row">
         <div style="flex:1;min-width:0">
           <div class="vbet-card-meta">${v.market}${groupTag}${approxTag}</div>
@@ -328,13 +430,14 @@ function buildVbetCard(v, bankroll) {
             odds: <b style="color:#e8e8e8">${v.best_odds}</b>
             &nbsp;|&nbsp; modell: <b style="color:#aaa">${v.model_prob}%</b>
             &nbsp;|&nbsp; Tippmix: <b style="color:#aaa">${v.implied_prob}%</b>
-            &nbsp;|&nbsp; edge: <b style="color:#4cff91">+${v.edge_pct}%</b>
+            &nbsp;|&nbsp; edge: <b style="color:${edgeColor}">+${v.edge_pct}%</b>
           </div>
         </div>
         <div class="vbet-card-stake">
-          <div class="vbet-card-ft${isApprox ? ' approx' : ''}">${stake.toLocaleString('hu-HU')} Ft</div>
-          <div style="font-size:0.72rem;color:#555">Kelly ${v.kelly_pct}%</div>
-          <div style="font-size:0.75rem;color:#555;margin-top:2px">+${profit.toLocaleString('hu-HU')} Ft profit</div>
+          <div style="font-size:0.65rem;color:${stakeColor};margin-bottom:3px;font-weight:700">${recLabel}</div>
+          <div class="vbet-card-ft" style="color:${stakeColor}">${recStake.toLocaleString('hu-HU')} Ft</div>
+          <div style="font-size:0.7rem;color:#444;margin-top:2px">Teljes Kelly: ${fullStake.toLocaleString('hu-HU')} Ft</div>
+          <div style="font-size:0.72rem;color:#555;margin-top:1px">+${recProfit.toLocaleString('hu-HU')} Ft profit</div>
         </div>
       </div>
     </div>`;
@@ -351,6 +454,18 @@ function buildTippmixRow(m) {
   const vbets1x2     = allVbets.filter(v => v.value && v.market === '1X2');
   const vbetsDetail  = allVbets.filter(v => v.value && v.market !== '1X2');
   const allAnalyzed  = allVbets.filter(v => !v.value && v.model_prob > 0);
+
+  // Identify the single best bet per match (non-approx, edge ≥ 7%, priority: DNB > Gólszám O/U > 1X2)
+  const MKTPRIO = n => n.includes('Döntetlennél') ? 3 : /^Gólszám \d/.test(n) ? 2 : n === '1X2' ? 1 : 0;
+  const trusted = allVbets.filter(v =>
+    v.value &&
+    !['Szögletek', 'Statisztika'].includes(v.market_group) &&
+    v.edge_pct >= 7
+  ).sort((a, b) => {
+    const pd = MKTPRIO(b.market) - MKTPRIO(a.market);
+    return pd !== 0 ? pd : b.edge_pct - a.edge_pct;
+  });
+  const topKey = trusted.length > 0 ? trusted[0].market + '|||' + trusted[0].outcome : null;
   const totalValue   = allVbets.filter(v => v.value).length;
   const totalMarkets = allVbets.length;
 
@@ -365,9 +480,12 @@ function buildTippmixRow(m) {
 
   let cards1x2 = '';
   if (vbets1x2.length) {
-    cards1x2 = `<div style="margin-top:10px">${vbets1x2.map(v => buildVbetCard(v, bankroll)).join('')}</div>`;
+    cards1x2 = `<div style="margin-top:10px">${vbets1x2.map(v => {
+      const isTop = topKey && (v.market + '|||' + v.outcome === topKey);
+      return buildVbetCard(v, bankroll, isTop);
+    }).join('')}</div>`;
   } else if (totalValue === 0) {
-    cards1x2 = `<div style="margin-top:8px;font-size:0.78rem;color:#333">Nincs 1X2 value bet ennél a meccsn él</div>`;
+    cards1x2 = `<div style="margin-top:8px;font-size:0.78rem;color:#333">Nincs 1X2 value bet ennél a meccsnél</div>`;
   }
 
   // ── Section 2: Detailed bets (collapsible) ───────────────────────────────
@@ -375,7 +493,10 @@ function buildTippmixRow(m) {
   if (m.is_wc && totalMarkets > 0) {
     const uid = 'det_' + Math.random().toString(36).slice(2);
     const tblId = 'tbl_' + Math.random().toString(36).slice(2);
-    const detailValueCards = vbetsDetail.map(v => buildVbetCard(v, bankroll)).join('');
+    const detailValueCards = vbetsDetail.map(v => {
+      const isTop = topKey && (v.market + '|||' + v.outcome === topKey);
+      return buildVbetCard(v, bankroll, isTop);
+    }).join('');
     const allMarketsRows = allAnalyzed.slice(0, 100).map(v => {
       const isApprox = ['Szögletek', 'Statisztika'].includes(v.market_group);
       return `<tr>
@@ -463,6 +584,16 @@ function toggleDetail(id) {
   el.style.display = open ? 'block' : 'none';
   if (btn) btn.classList.toggle('open', open);
   if (btn) btn.textContent = btn.textContent.replace(/[▸▾]/, open ? '▾' : '▸');
+}
+
+function toggleGuide() {
+  const body = document.getElementById('guide-body');
+  const btn  = document.querySelector('.guide-toggle');
+  const open = !body.classList.contains('open');
+  body.classList.toggle('open', open);
+  btn.textContent = open
+    ? '📖 Mikor és mennyit fogadjak? — útmutató (kattints a bezáráshoz)'
+    : '📖 Mikor és mennyit fogadjak? — útmutató (kattints a megnyitáshoz)';
 }
 
 // ── All Teams / Demo ──────────────────────────────────────────────────────
