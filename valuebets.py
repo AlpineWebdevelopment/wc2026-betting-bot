@@ -68,17 +68,17 @@ def _make_vbet(market_name: str, outcome_name: str, decimal_odds: float,
     }
 
 
-# Groups to skip entirely (player/corner/card/stats — not predictable from goals model)
+# Groups to skip entirely (player/card markets — not predictable from any model)
 _SKIP_GROUPS = {
-    "Játékosok", "Szögletek", "Büntetőlapok", "Statisztika",
+    "Játékosok", "Büntetőlapok",
 }
 
-# Market name substrings indicating non-predictable player/stats markets
+# Market name substrings indicating non-predictable player/card/shot markets
 _SKIP_MARKET_SUBSTRINGS = [
-    "szögletsz", "sarkol", "büntetőlap", "sárga", "piros", "lesszám",
-    "kaput eltaláló", "kapura tartó", "szabálytalanság", "lesz 11-es",
-    "lesz kiállítás", "lesz öngól", "lesz mesterhármas",
-    "kezdőként", "kezdőként",  # player-specific
+    "büntetőlap", "sárga lap", "piros lap",
+    "kaput eltaláló", "kapura tartó", "szabálytalanság",
+    "lesz 11-es", "lesz kiállítás", "lesz öngól", "lesz mesterhármas",
+    "kezdőként",  # player-specific
 ]
 
 

@@ -647,6 +647,133 @@ def compute_market_probs(
         p_no_goal = float(sum(m30[i, j] for i in range(n) for j in range(n) if i + j == 0))
         return {0: 1.0 - p_no_goal, 1: p_no_goal}
 
+    # ── Corner markets (approximate — Poisson model from xG) ─────────────────
+    # Higher xG → more attacking pressure → more corners
+    # WC avg ~10 total corners; formula calibrated to that baseline
+    _CORN_MAX = 25
+    _corn_h = max(0.5, 2.3 + 2.5 * exp_h)
+    _corn_a = max(0.5, 2.3 + 2.5 * exp_a)
+    _corn_total = _corn_h + _corn_a
+    _ht_corn_h = HT_FRAC * _corn_h
+    _ht_corn_a = HT_FRAC * _corn_a
+    _ht_corn_total = _ht_corn_h + _ht_corn_a
+    _k25 = np.arange(0, _CORN_MAX + 1)
+
+    # Total corner O/U  (e.g. "Szögletszám 8,5") and HT variant
+    for _corn_prefix, _corn_lam in [
+        ("Szögletszám", _corn_total),
+        ("1. félidő - Szögletszám", _ht_corn_total),
+    ]:
+        _cm = re.match(rf"^{re.escape(_corn_prefix)} (\d+),5$", name)
+        if _cm:
+            _line = int(_cm.group(1)) + 0.5
+            _pmf = poisson.pmf(_k25, _corn_lam)
+            _over = float(_pmf[int(_line + 0.5):].sum())
+            return {0: 1.0 - _over, 1: _over}
+
+    # Corner count ranges  [0-8, 9-11, 12+]
+    if name == "Szögletek száma":
+        _pmf = poisson.pmf(_k25, _corn_total)
+        return {0: float(_pmf[:9].sum()), 1: float(_pmf[9:12].sum()), 2: float(_pmf[12:].sum())}
+    if name == "1. félidő - Szögletek száma":
+        _pmf = poisson.pmf(_k25, _ht_corn_total)
+        return {0: float(_pmf[:5].sum()), 1: float(_pmf[5:7].sum()), 2: float(_pmf[7:].sum())}
+
+    # Home / away corner O/U (e.g. "Hazai csapat szögletszám 5,5")
+    for _corn_prefix, _corn_lam in [
+        ("Hazai csapat szögletszám", _corn_h),
+        ("Vendégcsapat szögletszám", _corn_a),
+    ]:
+        _cm = re.match(rf"^{re.escape(_corn_prefix)} (\d+),5$", name)
+        if _cm:
+            _line = int(_cm.group(1)) + 0.5
+            _pmf = poisson.pmf(_k25, _corn_lam)
+            _over = float(_pmf[int(_line + 0.5):].sum())
+            return {0: 1.0 - _over, 1: _over}
+
+    # Team corner ranges  [0-2, 3-4, 5-6, 7+]
+    for _corn_mkt, _corn_lam in [
+        ("Hazai csapat szögleteinek száma", _corn_h),
+        ("Vendégcsapat szögleteinek száma", _corn_a),
+    ]:
+        if name == _corn_mkt:
+            _pmf = poisson.pmf(_k25, _corn_lam)
+            return {
+                0: float(_pmf[:3].sum()),
+                1: float(_pmf[3:5].sum()),
+                2: float(_pmf[5:7].sum()),
+                3: float(_pmf[7:].sum()),
+            }
+
+    # Corner handicap  (e.g. "Szöglet hendikep -3,5") — 2 outcomes: home / away
+    for _corn_prefix, _corn_lam_h, _corn_lam_a in [
+        ("Szöglet hendikep", _corn_h, _corn_a),
+        ("1. félidő - Szöglet hendikep", _ht_corn_h, _ht_corn_a),
+    ]:
+        _cm = re.match(rf"^{re.escape(_corn_prefix)} ([+-]?\d+),5$", name)
+        if _cm:
+            _lint = int(_cm.group(1))
+            _lval = _lint + (-0.5 if _lint < 0 else 0.5)  # e.g. -3 → -3.5
+            _ph = poisson.pmf(_k25, _corn_lam_h)
+            _pa = poisson.pmf(_k25, _corn_lam_a)
+            _hp = _ap = 0.0
+            for _ci, _pv in enumerate(_ph):
+                for _cj, _pva in enumerate(_pa):
+                    if (_ci - _cj) > -_lval:
+                        _hp += _pv * _pva
+                    else:
+                        _ap += _pv * _pva
+            return {0: _hp, 1: _ap}
+
+    # Which team more corners  [home, equal, away]
+    for _corn_mkt, _corn_lam_h, _corn_lam_a in [
+        ("Melyik csapat végez el több szögletet?", _corn_h, _corn_a),
+        ("1. félidő - Melyik csapat végez el több szögletet?", _ht_corn_h, _ht_corn_a),
+    ]:
+        if name == _corn_mkt:
+            _ph = poisson.pmf(_k25, _corn_lam_h)
+            _pa = poisson.pmf(_k25, _corn_lam_a)
+            _p_hm = _p_eq = _p_am = 0.0
+            for _ci, _pv in enumerate(_ph):
+                for _cj, _pva in enumerate(_pa):
+                    _p = _pv * _pva
+                    if _ci > _cj:   _p_hm += _p
+                    elif _ci == _cj: _p_eq += _p
+                    else:            _p_am += _p
+            return {0: _p_hm, 1: _p_eq, 2: _p_am}
+
+    # Corner odd/even
+    if name == "Szögletszám: páros vagy páratlan":
+        _pmf = poisson.pmf(_k25, _corn_total)
+        _odd = float(_pmf[1::2].sum())
+        return {0: _odd, 1: 1.0 - _odd}
+
+    # ── Offside markets (approximate — Poisson model from xG) ─────────────────
+    # Typical WC match: ~3-5 total offsides; attacking teams commit more
+    _offs_h = max(0.1, 0.7 + 1.3 * exp_h)
+    _offs_a = max(0.1, 0.7 + 1.3 * exp_a)
+    _k20 = np.arange(0, 20)
+
+    # Total offside O/U  (e.g. "Lesszám 3,5")
+    _cm = re.match(r"^Lesszám (\d+),5$", name)
+    if _cm:
+        _line = int(_cm.group(1)) + 0.5
+        _pmf = poisson.pmf(_k20, _offs_h + _offs_a)
+        _over = float(_pmf[int(_line + 0.5):].sum())
+        return {0: 1.0 - _over, 1: _over}
+
+    # Team offside O/U  (e.g. "Hazai csapat - Lesszám 1,5")
+    for _off_prefix, _off_lam in [
+        ("Hazai csapat - Lesszám", _offs_h),
+        ("Vendégcsapat - Lesszám", _offs_a),
+    ]:
+        _cm = re.match(rf"^{re.escape(_off_prefix)} (\d+),5$", name)
+        if _cm:
+            _line = int(_cm.group(1)) + 0.5
+            _pmf = poisson.pmf(_k20, _off_lam)
+            _over = float(_pmf[int(_line + 0.5):].sum())
+            return {0: 1.0 - _over, 1: _over}
+
     return {}  # not predictable
 
 

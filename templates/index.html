@@ -25,7 +25,6 @@
     }
     header h1 { font-size: 1.4rem; font-weight: 700; color: #fff; flex: 1; }
     .badge { font-size: 0.8rem; color: #6b7aff; background: #1e2255; padding: 3px 10px; border-radius: 20px; }
-    .badge-green { color: #4cff91; background: #0a2a1a; }
 
     .tabs {
       display: flex;
@@ -52,110 +51,8 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* Search card */
-    .search-card {
-      background: #16161e;
-      border: 1px solid #2a2a3a;
-      border-radius: 14px;
-      padding: 28px;
-      margin-bottom: 28px;
-    }
     .card-title { font-size: 0.8rem; color: #555; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; font-weight: 600; }
-    .search-row { display: flex; gap: 12px; flex-wrap: wrap; }
-    .search-row input, .search-row select {
-      flex: 1; min-width: 160px;
-      background: #0d0d0f;
-      border: 1px solid #333;
-      border-radius: 8px;
-      padding: 11px 14px;
-      color: #e8e8e8;
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color .2s;
-    }
-    .search-row input:focus, .search-row select:focus { border-color: #6b7aff; }
-    .search-row button {
-      background: #6b7aff;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 11px 28px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .2s;
-      white-space: nowrap;
-    }
-    .search-row button:hover { background: #5563dd; }
-    .search-row button:disabled { background: #333; color: #666; cursor: default; }
 
-    /* Result card */
-    .result-card {
-      background: #16161e;
-      border: 1px solid #2a2a3a;
-      border-radius: 14px;
-      padding: 28px;
-      margin-bottom: 20px;
-      display: none;
-    }
-    .result-card.visible { display: block; }
-
-    .teams-header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      margin-bottom: 12px;
-    }
-    .team-name { font-size: 1.25rem; font-weight: 700; }
-    .vs { color: #555; font-size: 0.9rem; font-weight: 600; }
-    .xg-badge { text-align: center; color: #6b7aff; font-size: 0.85rem; margin-bottom: 20px; }
-
-    /* Probability bars */
-    .prob-row {
-      display: flex;
-      border-radius: 8px;
-      overflow: hidden;
-      height: 44px;
-      margin-bottom: 18px;
-    }
-    .prob-segment {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      font-size: 0.75rem;
-      font-weight: 700;
-      gap: 2px;
-      transition: flex .5s ease;
-    }
-    .prob-segment .label { opacity: .7; font-weight: 400; }
-    .prob-home { background: #2d4a8a; color: #a8c4ff; }
-    .prob-draw { background: #2a2a3a; color: #aaa; }
-    .prob-away { background: #3a2020; color: #ffb8a8; }
-
-    /* Odds table */
-    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-    th { text-align: left; color: #555; font-weight: 600; padding: 7px 10px; border-bottom: 1px solid #222; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .05em; }
-    td { padding: 10px 10px; border-bottom: 1px solid #1e1e26; }
-    tr:last-child td { border-bottom: none; }
-    .val-yes { color: #4cff91; font-weight: 700; }
-    .val-no  { color: #444; }
-    .edge-pos { color: #4cff91; }
-    .edge-neg { color: #ff6b6b; }
-
-    .notice {
-      background: #1a1a0a;
-      border: 1px solid #3a3a10;
-      border-radius: 8px;
-      padding: 14px 18px;
-      font-size: 0.85rem;
-      color: #aaa;
-      margin-top: 16px;
-    }
-    .notice a { color: #6b7aff; }
-
-    /* Live matches */
     .live-header {
       display: flex;
       align-items: center;
@@ -182,10 +79,8 @@
       border-radius: 12px;
       padding: 20px 24px;
       margin-bottom: 12px;
-      cursor: pointer;
       transition: border-color .15s;
     }
-    .match-row:hover { border-color: #6b7aff; }
     .match-row.has-value { border-color: #1a3a1a; }
     .match-row.has-value:hover { border-color: #4cff91; }
 
@@ -198,7 +93,6 @@
       gap: 8px;
     }
     .match-teams { font-weight: 700; font-size: 1rem; }
-    .match-time { color: #555; font-size: 0.8rem; }
     .value-pill {
       background: #0a2a1a;
       color: #4cff91;
@@ -216,18 +110,82 @@
       overflow: hidden;
       margin-bottom: 8px;
     }
-    .mini-probs { display: flex; justify-content: space-between; font-size: 0.75rem; color: #666; margin-bottom: 12px; }
+    .mini-probs { display: flex; justify-content: space-between; font-size: 0.75rem; color: #666; margin-bottom: 14px; }
 
-    .vbet-mini { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    .vbet-chip {
-      background: #0d1a0d;
-      border: 1px solid #1a3a1a;
-      border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 0.78rem;
-      color: #4cff91;
+    /* Section dividers inside match row */
+    .section-divider { border-top: 1px solid #1e1e26; margin: 14px 0; }
+    .section-label {
+      font-size: 0.7rem;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 700;
+      margin-bottom: 8px;
     }
-    .vbet-chip span { color: #888; margin-right: 4px; }
+
+    /* Value bet action cards */
+    .vbet-card {
+      background: #0a1a0a;
+      border: 1px solid #1a4a1a;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+    }
+    .vbet-card.approx {
+      background: #0d100a;
+      border-color: #2a3a1a;
+    }
+    .vbet-card-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .vbet-card-meta { font-size: 0.78rem; color: #666; margin-bottom: 3px; }
+    .vbet-card-outcome { font-size: 1.0rem; font-weight: 700; color: #fff; word-break: break-word; }
+    .vbet-card-stats { font-size: 0.8rem; color: #888; margin-top: 4px; }
+    .vbet-card-stake { text-align: right; white-space: nowrap; }
+    .vbet-card-ft { font-size: 1.4rem; font-weight: 800; color: #4cff91; }
+    .vbet-card-ft.approx { color: #a0cc60; }
+    .approx-tag {
+      font-size: 0.65rem;
+      color: #888;
+      background: #1a1f0a;
+      border: 1px solid #333;
+      border-radius: 3px;
+      padding: 1px 4px;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
+
+    /* Expand button */
+    .expand-btn {
+      background: transparent;
+      border: 1px solid #2a2a3a;
+      color: #555;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+      width: 100%;
+      text-align: left;
+    }
+    .expand-btn:hover { border-color: #6b7aff; color: #aaa; }
+    .expand-btn.open { border-color: #2a4a2a; color: #4cff91; }
+
+    /* All markets table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th { text-align: left; color: #555; font-weight: 600; padding: 7px 10px; border-bottom: 1px solid #222; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .05em; }
+    td { padding: 9px 10px; border-bottom: 1px solid #1e1e26; }
+    tr:last-child td { border-bottom: none; }
+    .edge-pos { color: #4cff91; }
+    .edge-neg { color: #ff6b6b; }
+
+    .loading { text-align: center; color: #6b7aff; padding: 20px; font-size: 0.9rem; }
+    .error { color: #ff6b6b; background: #1e0a0a; border: 1px solid #3a1010; border-radius: 8px; padding: 12px 16px; margin-top: 16px; }
+    .empty-state { text-align: center; color: #555; padding: 60px 20px; font-size: 0.95rem; }
 
     /* Demo grid */
     .demo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
@@ -236,51 +194,31 @@
       border: 1px solid #2a2a3a;
       border-radius: 12px;
       padding: 18px;
-      cursor: pointer;
-      transition: border-color .2s, transform .15s;
     }
-    .demo-card:hover { border-color: #6b7aff; transform: translateY(-2px); }
     .demo-card .match { font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; }
     .demo-card .probs { display: flex; justify-content: space-between; font-size: 0.75rem; color: #888; margin-top: 6px; }
-
-    .loading { text-align: center; color: #6b7aff; padding: 20px; font-size: 0.9rem; }
-    .error { color: #ff6b6b; background: #1e0a0a; border: 1px solid #3a1010; border-radius: 8px; padding: 12px 16px; margin-top: 16px; }
-
-    .empty-state { text-align: center; color: #555; padding: 60px 20px; font-size: 0.95rem; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>WC 2026 Betting Model</h1>
-  <span class="badge">Poisson Model</span>
-  <span class="badge badge-green" id="odds-status">Loading odds...</span>
+  <h1>⚽ WC 2026 Betting Model</h1>
+  <span class="badge">Poisson + Kelly</span>
 </header>
 
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('live')">Live Value Bets</div>
-  <div class="tab" onclick="switchTab('tippmix')">Tippmix.hu</div>
-  <div class="tab" onclick="switchTab('predict')">Predict Match</div>
-  <div class="tab" onclick="switchTab('demo')">All Teams</div>
+  <div class="tab active" onclick="switchTab('tippmix')">Tippmix.hu</div>
+  <div class="tab" onclick="switchTab('demo')">Összes csapat</div>
 </div>
 
 <div class="container">
 
-  <!-- TAB: Live Value Bets -->
-  <div class="tab-content active" id="tab-live">
-    <div class="live-header">
-      <div class="card-title" style="margin:0">Matches with bookmaker odds loaded</div>
-      <button class="refresh-btn" onclick="loadLiveMatches()">Refresh odds</button>
-    </div>
-    <div id="live-list"><div class="loading">Loading live matches...</div></div>
-  </div>
-
   <!-- TAB: Tippmix.hu -->
-  <div class="tab-content" id="tab-tippmix">
+  <div class="tab-content active" id="tab-tippmix">
     <div class="live-header">
       <div>
-        <div class="card-title" style="margin:0">Tippmix.hu — Value bets on your actual bookmaker</div>
-        <div style="font-size:0.8rem;color:#555;margin-top:4px">Loads live odds directly from tippmix.hu and compares against the model</div>
+        <div class="card-title" style="margin:0">Tippmix.hu — Value bet kereső</div>
+        <div style="font-size:0.8rem;color:#555;margin-top:4px">Élő Tippmix odds + Poisson modell összehasonlítás. Szögletek és lesek becsült értékek (~).</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px;background:#16161e;border:1px solid #2a2a3a;border-radius:8px;padding:8px 14px">
@@ -290,43 +228,20 @@
             oninput="rebuildStakes()" />
           <span style="font-size:0.85rem;color:#555">Ft</span>
         </div>
-        <button class="refresh-btn" onclick="loadTippmix()">Refresh Tippmix</button>
+        <button class="refresh-btn" onclick="loadTippmix()">Tippmix frissítése</button>
       </div>
     </div>
-    <div id="tippmix-list"><div class="empty-state" style="padding:40px 20px;color:#555">Click "Refresh Tippmix" to load live odds from Tippmix.hu<br><span style="font-size:0.8rem;margin-top:8px;display:block">Takes ~10 seconds (opens headless browser)</span></div></div>
-  </div>
-
-  <!-- TAB: Predict Match -->
-  <div class="tab-content" id="tab-predict">
-    <div class="search-card">
-      <div class="card-title">Predict any match</div>
-      <div class="search-row">
-        <input id="home" type="text" placeholder="Home team e.g. Brazil" list="teams-list" />
-        <input id="away" type="text" placeholder="Away team e.g. Germany" list="teams-list" />
-        <select id="neutral">
-          <option value="true">Neutral venue</option>
-          <option value="false">Home advantage</option>
-        </select>
-        <button id="predict-btn" onclick="predict()">Predict</button>
+    <div id="tippmix-list">
+      <div class="empty-state">
+        Kattints a "Tippmix frissítése" gombra az élő oddsok betöltéséhez<br>
+        <span style="font-size:0.8rem;margin-top:8px;display:block">~10 mp (headless böngésző indul)</span>
       </div>
-      <datalist id="teams-list"></datalist>
-      <div id="error" class="error" style="display:none"></div>
-    </div>
-    <div class="result-card" id="result-card">
-      <div class="teams-header">
-        <span class="team-name" id="r-home"></span>
-        <span class="vs">vs</span>
-        <span class="team-name" id="r-away"></span>
-      </div>
-      <div class="xg-badge" id="r-xg"></div>
-      <div class="prob-row" id="r-bar"></div>
-      <div id="r-odds-section"></div>
     </div>
   </div>
 
-  <!-- TAB: Demo / Quick picks -->
+  <!-- TAB: All Teams -->
   <div class="tab-content" id="tab-demo">
-    <div class="card-title" style="margin-bottom:16px">Click any match to run the model</div>
+    <div class="card-title" style="margin-bottom:16px">WC 2026 meccsek — modell valószínűségek</div>
     <div class="demo-grid" id="demo-grid"></div>
   </div>
 
@@ -335,10 +250,8 @@
 <script>
 // ── Tab switching ─────────────────────────────────────────────────────────
 function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    const names = ['live','tippmix','predict','demo'];
-    t.classList.toggle('active', names[i] === name);
-  });
+  const names = ['tippmix', 'demo'];
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', names[i] === name));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
 }
@@ -351,22 +264,21 @@ function getBankroll() {
 }
 
 function rebuildStakes() {
-  if (!_tippmixData.length) return;
-  renderTippmixList(_tippmixData);
+  if (_tippmixData.length) renderTippmixList(_tippmixData);
 }
 
 async function loadTippmix() {
   const list = document.getElementById('tippmix-list');
-  list.innerHTML = '<div class="loading">Opening headless browser and fetching Tippmix.hu odds... (~10s)</div>';
+  list.innerHTML = '<div class="loading">Headless böngésző megnyitása és Tippmix.hu betöltése... (~10mp)</div>';
   try {
     const res  = await fetch('/tippmix-matches');
     const data = await res.json();
     if (data.error) { list.innerHTML = `<div class="error">${data.error}</div>`; return; }
-    if (!data.length) { list.innerHTML = '<div class="empty-state">No matches found on Tippmix right now.</div>'; return; }
+    if (!data.length) { list.innerHTML = '<div class="empty-state">Nincs találat a Tippmixen.</div>'; return; }
     _tippmixData = data;
     renderTippmixList(data);
   } catch(e) {
-    list.innerHTML = `<div class="error">Could not load Tippmix data: ${e.message}</div>`;
+    list.innerHTML = `<div class="error">Tippmix betöltési hiba: ${e.message}</div>`;
   }
 }
 
@@ -374,18 +286,18 @@ function renderTippmixList(data) {
   const list = document.getElementById('tippmix-list');
   const wc    = data.filter(m => m.is_wc);
   const other = data.filter(m => !m.is_wc);
-  const valCount = data.filter(m => m.has_value).length;
+  const valCount = data.reduce((s, m) => s + ((m.value_bets || []).filter(v => v.value).length), 0);
 
   list.innerHTML = `<div style="font-size:0.8rem;color:#555;margin-bottom:16px">
-    ${data.length} matches loaded &nbsp;|&nbsp; ${wc.length} World Cup &nbsp;|&nbsp;
-    <span style="color:#4cff91">${valCount} value bets found</span>
+    ${data.length} meccs betöltve &nbsp;|&nbsp; ${wc.length} Világbajnokság &nbsp;|&nbsp;
+    <span style="color:#4cff91">${valCount} value bet összesen</span>
   </div>`;
 
   if (wc.length) {
     const h = document.createElement('div');
     h.className = 'card-title';
     h.style.marginBottom = '12px';
-    h.textContent = 'World Cup 2026';
+    h.textContent = 'Világbajnokság 2026';
     list.appendChild(h);
     wc.forEach(m => list.appendChild(buildTippmixRow(m)));
   }
@@ -393,102 +305,122 @@ function renderTippmixList(data) {
     const h = document.createElement('div');
     h.className = 'card-title';
     h.style.margin = '20px 0 12px';
-    h.textContent = 'Other Football';
+    h.textContent = 'Egyéb labdarúgás';
     list.appendChild(h);
     other.forEach(m => list.appendChild(buildTippmixRow(m)));
   }
 }
 
+function buildVbetCard(v, bankroll) {
+  const stake    = Math.max(100, Math.round(bankroll * v.kelly_pct / 100 / 100) * 100);
+  const payout   = Math.round(stake * v.best_odds);
+  const profit   = payout - stake;
+  const isApprox = ['Szögletek', 'Statisztika'].includes(v.market_group);
+  const approxTag = isApprox ? '<span class="approx-tag">~becslés</span>' : '';
+  const groupTag  = v.market_group ? `<span style="font-size:0.68rem;color:#444;margin-left:6px">[${v.market_group}]</span>` : '';
+  return `
+    <div class="vbet-card${isApprox ? ' approx' : ''}">
+      <div class="vbet-card-row">
+        <div style="flex:1;min-width:0">
+          <div class="vbet-card-meta">${v.market}${groupTag}${approxTag}</div>
+          <div class="vbet-card-outcome">${v.outcome}</div>
+          <div class="vbet-card-stats">
+            odds: <b style="color:#e8e8e8">${v.best_odds}</b>
+            &nbsp;|&nbsp; modell: <b style="color:#aaa">${v.model_prob}%</b>
+            &nbsp;|&nbsp; Tippmix: <b style="color:#aaa">${v.implied_prob}%</b>
+            &nbsp;|&nbsp; edge: <b style="color:#4cff91">+${v.edge_pct}%</b>
+          </div>
+        </div>
+        <div class="vbet-card-stake">
+          <div class="vbet-card-ft${isApprox ? ' approx' : ''}">${stake.toLocaleString('hu-HU')} Ft</div>
+          <div style="font-size:0.72rem;color:#555">Kelly ${v.kelly_pct}%</div>
+          <div style="font-size:0.75rem;color:#555;margin-top:2px">+${profit.toLocaleString('hu-HU')} Ft profit</div>
+        </div>
+      </div>
+    </div>`;
+}
+
 function buildTippmixRow(m) {
   const bankroll = getBankroll();
-  const hw = (m.home_win*100).toFixed(1);
-  const dr = (m.draw*100).toFixed(1);
-  const aw = (m.away_win*100).toFixed(1);
+  const hw = (m.home_win * 100).toFixed(1);
+  const dr = (m.draw    * 100).toFixed(1);
+  const aw = (m.away_win* 100).toFixed(1);
   const dt = m.event_date ? new Date(m.event_date).toLocaleString('hu-HU') : '';
 
-  const oddsRow = `<div style="display:flex;gap:16px;font-size:0.82rem;color:#888;margin-top:10px;flex-wrap:wrap">
-    <span>1 (hazai): <b style="color:#e8e8e8">${m.home_odds}</b></span>
-    <span>X (döntetlen): <b style="color:#e8e8e8">${m.draw_odds}</b></span>
-    <span>2 (vendég): <b style="color:#e8e8e8">${m.away_odds}</b></span>
-    <span style="color:#555">xG: ${m.exp_home_goals} – ${m.exp_away_goals}</span>
-  </div>`;
+  const allVbets = m.value_bets || [];
+  const vbets1x2     = allVbets.filter(v => v.value && v.market === '1X2');
+  const vbetsDetail  = allVbets.filter(v => v.value && v.market !== '1X2');
+  const allAnalyzed  = allVbets.filter(v => !v.value && v.model_prob > 0);
+  const totalValue   = allVbets.filter(v => v.value).length;
+  const totalMarkets = allVbets.length;
 
-  // Value bet action cards — all markets
-  const vbets = (m.value_bets || []).filter(v => v.value);
-  let actionCards = '';
-  if (vbets.length) {
-    actionCards = `<div style="margin-top:14px">
-      <div style="font-size:0.72rem;color:#4cff91;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px">
-        ${vbets.length} VALUE BET TALALT
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px">`;
-    for (const v of vbets) {
-      const stake    = Math.round(bankroll * v.kelly_pct / 100 / 100) * 100;
-      const stakeMin = Math.max(stake, 100);
-      const payout   = Math.round(stakeMin * v.best_odds);
-      const profit   = payout - stakeMin;
-      const groupTag = v.market_group ? `<span style="font-size:0.7rem;color:#555;margin-left:8px">[${v.market_group}]</span>` : '';
-      actionCards += `
-        <div style="background:#0a1a0a;border:1px solid #1a4a1a;border-radius:10px;padding:12px 16px">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
-            <div style="flex:1;min-width:0">
-              <div style="font-size:0.78rem;color:#666;margin-bottom:3px">${v.market}${groupTag}</div>
-              <div style="font-size:1.0rem;font-weight:700;color:#fff;word-break:break-word">${v.outcome}</div>
-              <div style="font-size:0.8rem;color:#888;margin-top:4px">
-                odds: <b style="color:#e8e8e8">${v.best_odds}</b>
-                &nbsp;|&nbsp; modell: <b style="color:#aaa">${v.model_prob}%</b>
-                &nbsp;|&nbsp; Tippmix: <b style="color:#aaa">${v.implied_prob}%</b>
-                &nbsp;|&nbsp; edge: <b style="color:#4cff91">+${v.edge_pct}%</b>
-              </div>
-            </div>
-            <div style="text-align:right;white-space:nowrap">
-              <div style="font-size:1.4rem;font-weight:800;color:#4cff91">${stakeMin.toLocaleString('hu-HU')} Ft</div>
-              <div style="font-size:0.72rem;color:#555">Kelly ${v.kelly_pct}%</div>
-              <div style="font-size:0.75rem;color:#555;margin-top:2px">+${profit.toLocaleString('hu-HU')} Ft profit</div>
-            </div>
-          </div>
-        </div>`;
-    }
-    actionCards += '</div></div>';
+  // ── Section 1: Who wins (1X2) ────────────────────────────────────────────
+  const oddsRow = `
+    <div style="display:flex;gap:16px;font-size:0.82rem;color:#888;flex-wrap:wrap">
+      <span>1 (hazai): <b style="color:#e8e8e8">${m.home_odds}</b></span>
+      <span>X: <b style="color:#e8e8e8">${m.draw_odds}</b></span>
+      <span>2 (vendég): <b style="color:#e8e8e8">${m.away_odds}</b></span>
+      <span style="color:#555">xG: ${m.exp_home_goals} – ${m.exp_away_goals}</span>
+    </div>`;
+
+  let cards1x2 = '';
+  if (vbets1x2.length) {
+    cards1x2 = `<div style="margin-top:10px">${vbets1x2.map(v => buildVbetCard(v, bankroll)).join('')}</div>`;
+  } else if (totalValue === 0) {
+    cards1x2 = `<div style="margin-top:8px;font-size:0.78rem;color:#333">Nincs 1X2 value bet ennél a meccsn él</div>`;
   }
 
-  // All predictions table (collapsible) for WC matches
-  let allMarketsSection = '';
-  const allPreds = (m.value_bets || []).filter(v => !v.value && v.model_prob > 0);
-  if (allPreds.length && m.is_wc) {
-    const uid = 'mkt_' + Math.random().toString(36).slice(2);
-    allMarketsSection = `
-      <div style="margin-top:12px">
-        <button onclick="toggleSection('${uid}')" style="background:transparent;border:1px solid #2a2a3a;color:#555;border-radius:6px;padding:5px 12px;font-size:0.75rem;cursor:pointer">
-          + ${allPreds.length} tovabbi piac megtekintese
-        </button>
-        <div id="${uid}" style="display:none;margin-top:10px;overflow-x:auto">
-          <table style="font-size:0.78rem">
-            <thead><tr>
-              <th>Piac</th><th>Kimenetel</th><th>Odds</th>
-              <th>Modell%</th><th>Impl%</th><th>Edge%</th>
-            </tr></thead>
-            <tbody>
-              ${allPreds.slice(0,60).map(v => `<tr>
-                <td style="color:#666;max-width:180px;word-break:break-word">${v.market}</td>
-                <td style="max-width:160px;word-break:break-word">${v.outcome}</td>
-                <td>${v.best_odds}</td>
-                <td>${v.model_prob}%</td>
-                <td>${v.implied_prob}%</td>
-                <td class="${v.edge_pct >= 0 ? 'edge-pos' : 'edge-neg'}">${v.edge_pct >= 0 ? '+' : ''}${v.edge_pct}%</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
+  // ── Section 2: Detailed bets (collapsible) ───────────────────────────────
+  let detailSection = '';
+  if (m.is_wc && totalMarkets > 0) {
+    const uid = 'det_' + Math.random().toString(36).slice(2);
+    const tblId = 'tbl_' + Math.random().toString(36).slice(2);
+    const detailValueCards = vbetsDetail.map(v => buildVbetCard(v, bankroll)).join('');
+    const allMarketsRows = allAnalyzed.slice(0, 100).map(v => {
+      const isApprox = ['Szögletek', 'Statisztika'].includes(v.market_group);
+      return `<tr>
+        <td style="color:#666;max-width:160px;word-break:break-word">${v.market}${isApprox ? ' <span style="font-size:0.65rem;color:#555">(~)</span>' : ''}</td>
+        <td style="max-width:150px;word-break:break-word">${v.outcome}</td>
+        <td>${v.best_odds}</td>
+        <td>${v.model_prob}%</td>
+        <td>${v.implied_prob}%</td>
+        <td class="${v.edge_pct >= 0 ? 'edge-pos' : 'edge-neg'}">${v.edge_pct >= 0 ? '+' : ''}${v.edge_pct}%</td>
+      </tr>`;
+    }).join('');
+
+    const btnLabel = vbetsDetail.length
+      ? `▸ Részletes elemzés (${vbetsDetail.length} value bet + szögletek/lesek)`
+      : `▸ Részletes elemzés megnyitása`;
+
+    detailSection = `
+      <div class="section-divider"></div>
+      <button id="btn_${uid}" class="expand-btn" onclick="toggleDetail('${uid}')">
+        ${btnLabel}
+      </button>
+      <div id="${uid}" style="display:none;margin-top:12px">
+        ${vbetsDetail.length
+          ? `<div class="section-label">Részletes value betek (szögletek és lesek ~ becsült)</div>
+             <div style="margin-bottom:12px">${detailValueCards}</div>`
+          : `<div style="font-size:0.8rem;color:#444;margin-bottom:12px">Nincs más value bet (csak szögletek/lesek elemzés lent)</div>`}
+        ${allAnalyzed.length
+          ? `<button id="btn_${tblId}" class="expand-btn" style="margin-bottom:8px" onclick="toggleDetail('${tblId}')">
+               ▸ Összes elemzett piac (${allAnalyzed.length} piac — nem value bet)
+             </button>
+             <div id="${tblId}" style="display:none;overflow-x:auto">
+               <table style="font-size:0.78rem">
+                 <thead><tr>
+                   <th>Piac</th><th>Kimenetel</th><th>Odds</th>
+                   <th>Modell%</th><th>Impl%</th><th>Edge%</th>
+                 </tr></thead>
+                 <tbody>${allMarketsRows}</tbody>
+               </table>
+             </div>`
+          : ''}
       </div>`;
   }
 
-  const totalMarkets = (m.value_bets || []).length;
-  const totalValue   = (m.value_bets || []).filter(v => v.value).length;
-
   const div = document.createElement('div');
   div.className = 'match-row' + (m.has_value ? ' has-value' : '');
-  div.style.cursor = 'default';
   div.innerHTML = `
     <div class="match-top">
       <div>
@@ -496,13 +428,14 @@ function buildTippmixRow(m) {
         <div style="font-size:0.75rem;color:#555;margin-top:2px">
           ${m.competition} &nbsp;·&nbsp; ${dt}
           ${m.is_wc ? '&nbsp;·&nbsp;<span style="color:#6b7aff">VB 2026</span>' : ''}
-          ${totalMarkets > 0 ? `&nbsp;·&nbsp;<span style="color:#555">${totalMarkets} piac elemezve</span>` : ''}
+          ${totalMarkets > 0 ? `&nbsp;·&nbsp;<span style="color:#444">${totalMarkets} piac</span>` : ''}
         </div>
       </div>
-      ${m.has_value
+      ${totalValue > 0
         ? `<span class="value-pill">${totalValue} VALUE BET</span>`
         : '<span style="color:#333;font-size:0.75rem">nincs edge</span>'}
     </div>
+
     <div class="mini-prob">
       <div style="flex:${hw};background:#2d4a8a"></div>
       <div style="flex:${dr};background:#2a2a3a"></div>
@@ -510,166 +443,29 @@ function buildTippmixRow(m) {
     </div>
     <div class="mini-probs">
       <span>${hw}% ${m.home_team}</span>
-      <span>${dr}% Draw</span>
+      <span>${dr}% Döntetlen</span>
       <span>${aw}% ${m.away_team}</span>
     </div>
+
+    <div class="section-label">Ki nyeri a meccset?</div>
     ${oddsRow}
-    ${actionCards}
-    ${allMarketsSection}`;
+    ${cards1x2}
+    ${detailSection}`;
 
   return div;
 }
 
-function toggleSection(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+function toggleDetail(id) {
+  const el  = document.getElementById(id);
+  const btn = document.getElementById('btn_' + id);
+  if (!el) return;
+  const open = el.style.display === 'none';
+  el.style.display = open ? 'block' : 'none';
+  if (btn) btn.classList.toggle('open', open);
+  if (btn) btn.textContent = btn.textContent.replace(/[▸▾]/, open ? '▾' : '▸');
 }
 
-// ── Live Matches ──────────────────────────────────────────────────────────
-async function loadLiveMatches() {
-  const list = document.getElementById('live-list');
-  list.innerHTML = '<div class="loading">Fetching live odds...</div>';
-  try {
-    const res  = await fetch('/live-matches');
-    const data = await res.json();
-    if (!data.length) {
-      list.innerHTML = '<div class="empty-state">No live odds available right now.<br>Odds appear closer to match time.</div>';
-      return;
-    }
-    document.getElementById('odds-status').textContent = `${data.length} matches live`;
-    list.innerHTML = '';
-    for (const m of data) {
-      list.appendChild(buildMatchRow(m));
-    }
-  } catch(e) {
-    list.innerHTML = '<div class="error">Could not load live matches.</div>';
-  }
-}
-
-function buildMatchRow(m) {
-  const hw = (m.home_win*100).toFixed(1);
-  const dr = (m.draw*100).toFixed(1);
-  const aw = (m.away_win*100).toFixed(1);
-  const t  = m.commence_time ? new Date(m.commence_time).toLocaleString() : '';
-
-  let vchips = '';
-  const vbets = m.value_bets.filter(v => v.value);
-  if (vbets.length) {
-    vchips = '<div class="vbet-mini">' + vbets.map(v =>
-      `<div class="vbet-chip"><span>${v.market}</span>${v.best_odds} &nbsp;+${v.edge_pct}% edge &nbsp;Kelly ${v.kelly_pct}%</div>`
-    ).join('') + '</div>';
-  }
-
-  const div = document.createElement('div');
-  div.className = 'match-row' + (m.has_value ? ' has-value' : '');
-  div.innerHTML = `
-    <div class="match-top">
-      <div class="match-teams">${m.home_team} vs ${m.away_team}</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        ${m.has_value ? '<span class="value-pill">VALUE BET</span>' : ''}
-        <span class="match-time">${t}</span>
-      </div>
-    </div>
-    <div class="mini-prob">
-      <div style="flex:${hw};background:#2d4a8a"></div>
-      <div style="flex:${dr};background:#2a2a3a"></div>
-      <div style="flex:${aw};background:#3a2020"></div>
-    </div>
-    <div class="mini-probs">
-      <span>${hw}% ${m.home_team}</span>
-      <span>${dr}% Draw</span>
-      <span>${aw}% ${m.away_team}</span>
-    </div>
-    <div style="font-size:0.8rem;color:#555">xG: ${m.home_team} ${m.exp_home_goals} &nbsp;–&nbsp; ${m.exp_away_goals} ${m.away_team}</div>
-    ${vchips}`;
-
-  div.onclick = () => {
-    switchTab('predict');
-    document.getElementById('home').value = m.home_team;
-    document.getElementById('away').value = m.away_team;
-    predict(m.home_team, m.away_team, true);
-  };
-  return div;
-}
-
-// ── Predict ───────────────────────────────────────────────────────────────
-async function predict(home, away, neutral) {
-  home    = home    ?? document.getElementById('home').value.trim();
-  away    = away    ?? document.getElementById('away').value.trim();
-  neutral = neutral ?? (document.getElementById('neutral').value === 'true');
-
-  if (!home || !away) { showError('Enter both team names.'); return; }
-  if (home === away)  { showError('Teams must be different.'); return; }
-
-  document.getElementById('error').style.display = 'none';
-  document.getElementById('result-card').classList.remove('visible');
-  document.getElementById('predict-btn').disabled = true;
-
-  try {
-    const res  = await fetch(`/predict?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}&neutral=${neutral}`);
-    const data = await res.json();
-    if (!res.ok) { showError(data.error || 'Unknown error'); return; }
-    renderResult(data);
-  } catch(e) {
-    showError('Could not reach server.');
-  } finally {
-    document.getElementById('predict-btn').disabled = false;
-  }
-}
-
-function renderResult(d) {
-  document.getElementById('r-home').textContent = d.home_team;
-  document.getElementById('r-away').textContent = d.away_team;
-  document.getElementById('r-xg').textContent =
-    `xG: ${d.home_team} ${d.exp_home_goals}  vs  ${d.exp_away_goals} ${d.away_team}`;
-
-  const hw = d.home_win*100, dr = d.draw*100, aw = d.away_win*100;
-  document.getElementById('r-bar').innerHTML = `
-    <div class="prob-segment prob-home" style="flex:${hw}">
-      <span>${hw.toFixed(1)}%</span><span class="label">Home</span>
-    </div>
-    <div class="prob-segment prob-draw" style="flex:${dr}">
-      <span>${dr.toFixed(1)}%</span><span class="label">Draw</span>
-    </div>
-    <div class="prob-segment prob-away" style="flex:${aw}">
-      <span>${aw.toFixed(1)}%</span><span class="label">Away</span>
-    </div>`;
-
-  let oddsHTML = '';
-  if (d.value_bets && d.value_bets.length) {
-    oddsHTML = `<div class="card-title" style="margin:16px 0 10px">Value bet analysis vs best available odds</div>
-    <table><thead><tr>
-      <th>Market</th><th>Model %</th><th>Implied %</th>
-      <th>Best Odds</th><th>Fair Odds</th><th>Edge %</th><th>Kelly %</th><th>Value?</th>
-    </tr></thead><tbody>`;
-    for (const b of d.value_bets) {
-      const ec = b.edge_pct >= 0 ? 'edge-pos' : 'edge-neg';
-      oddsHTML += `<tr>
-        <td>${b.market}</td>
-        <td>${b.model_prob}%</td><td>${b.implied_prob}%</td>
-        <td>${b.best_odds}</td><td>${b.fair_odds}</td>
-        <td class="${ec}">${b.edge_pct >= 0 ? '+' : ''}${b.edge_pct}%</td>
-        <td>${b.kelly_pct}%</td>
-        <td class="${b.value ? 'val-yes' : 'val-no'}">${b.value ? 'YES' : 'no'}</td>
-      </tr>`;
-    }
-    oddsHTML += '</tbody></table>';
-  } else {
-    oddsHTML = `<div class="notice">No live odds for this match yet — odds appear closer to kickoff.
-      Odds API key is active; check back nearer to match time or try a match from the <b>Live Value Bets</b> tab.</div>`;
-  }
-  document.getElementById('r-odds-section').innerHTML = oddsHTML;
-  document.getElementById('result-card').classList.add('visible');
-  document.getElementById('result-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function showError(msg) {
-  const el = document.getElementById('error');
-  el.textContent = msg;
-  el.style.display = 'block';
-}
-
-// ── Demo grid ─────────────────────────────────────────────────────────────
+// ── All Teams / Demo ──────────────────────────────────────────────────────
 const DEMO = [
   ["Brazil","Argentina"],["Germany","France"],["Spain","England"],
   ["Portugal","Netherlands"],["United States","Mexico"],
@@ -680,40 +476,29 @@ const DEMO = [
 async function buildDemoCards() {
   const grid = document.getElementById('demo-grid');
   for (const [h, a] of DEMO) {
-    const res = await fetch(`/predict?home=${encodeURIComponent(h)}&away=${encodeURIComponent(a)}&neutral=true`);
-    const d   = await res.json();
-    if (!res.ok) continue;
-    const hw = (d.home_win*100).toFixed(0), dr = (d.draw*100).toFixed(0), aw = (d.away_win*100).toFixed(0);
-    const card = document.createElement('div');
-    card.className = 'demo-card';
-    card.innerHTML = `
-      <div class="match">${h} vs ${a}</div>
-      <div class="mini-prob">
-        <div style="flex:${hw};background:#2d4a8a"></div>
-        <div style="flex:${dr};background:#2a2a3a"></div>
-        <div style="flex:${aw};background:#3a2020"></div>
-      </div>
-      <div class="probs">
-        <span>${hw}% Home</span><span>${dr}% Draw</span><span>${aw}% Away</span>
-      </div>`;
-    card.onclick = () => {
-      switchTab('predict');
-      document.getElementById('home').value = h;
-      document.getElementById('away').value = a;
-      predict(h, a, true);
-    };
-    grid.appendChild(card);
+    try {
+      const res = await fetch(`/predict?home=${encodeURIComponent(h)}&away=${encodeURIComponent(a)}&neutral=true`);
+      const d   = await res.json();
+      if (!res.ok) continue;
+      const hw = (d.home_win*100).toFixed(0), dr = (d.draw*100).toFixed(0), aw = (d.away_win*100).toFixed(0);
+      const card = document.createElement('div');
+      card.className = 'demo-card';
+      card.innerHTML = `
+        <div class="match">${h} vs ${a}</div>
+        <div class="mini-prob" style="margin-bottom:6px">
+          <div style="flex:${hw};background:#2d4a8a"></div>
+          <div style="flex:${dr};background:#2a2a3a"></div>
+          <div style="flex:${aw};background:#3a2020"></div>
+        </div>
+        <div class="probs">
+          <span>${hw}% Hazai</span><span>${dr}% Döntetlen</span><span>${aw}% Vendég</span>
+        </div>
+        <div style="font-size:0.75rem;color:#555;margin-top:6px">xG: ${d.exp_home_goals} – ${d.exp_away_goals}</div>`;
+      grid.appendChild(card);
+    } catch(e) { /* skip */ }
   }
 }
 
-// Load team autocomplete
-fetch('/teams').then(r => r.json()).then(teams => {
-  const dl = document.getElementById('teams-list');
-  teams.forEach(t => { const o = document.createElement('option'); o.value = t; dl.appendChild(o); });
-});
-
-// Boot
-loadLiveMatches();
 buildDemoCards();
 </script>
 </body>
