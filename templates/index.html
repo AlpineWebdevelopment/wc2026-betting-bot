@@ -259,6 +259,7 @@
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('live')">Live Value Bets</div>
+  <div class="tab" onclick="switchTab('tippmix')">Tippmix.hu</div>
   <div class="tab" onclick="switchTab('predict')">Predict Match</div>
   <div class="tab" onclick="switchTab('demo')">All Teams</div>
 </div>
@@ -272,6 +273,18 @@
       <button class="refresh-btn" onclick="loadLiveMatches()">Refresh odds</button>
     </div>
     <div id="live-list"><div class="loading">Loading live matches...</div></div>
+  </div>
+
+  <!-- TAB: Tippmix.hu -->
+  <div class="tab-content" id="tab-tippmix">
+    <div class="live-header">
+      <div>
+        <div class="card-title" style="margin:0">Tippmix.hu — Value bets on your actual bookmaker</div>
+        <div style="font-size:0.8rem;color:#555;margin-top:4px">Loads live odds directly from tippmix.hu and compares against the model</div>
+      </div>
+      <button class="refresh-btn" onclick="loadTippmix()">Refresh Tippmix</button>
+    </div>
+    <div id="tippmix-list"><div class="empty-state" style="padding:40px 20px;color:#555">Click "Refresh Tippmix" to load live odds from Tippmix.hu<br><span style="font-size:0.8rem;margin-top:8px;display:block">Takes ~10 seconds (opens headless browser)</span></div></div>
   </div>
 
   <!-- TAB: Predict Match -->
@@ -314,11 +327,99 @@
 // ── Tab switching ─────────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach((t,i) => {
-    const names = ['live','predict','demo'];
+    const names = ['live','tippmix','predict','demo'];
     t.classList.toggle('active', names[i] === name);
   });
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ── Tippmix.hu ────────────────────────────────────────────────────────────
+async function loadTippmix() {
+  const list = document.getElementById('tippmix-list');
+  list.innerHTML = '<div class="loading">Opening headless browser and fetching Tippmix.hu odds... (~10s)</div>';
+  try {
+    const res  = await fetch('/tippmix-matches');
+    const data = await res.json();
+    if (data.error) { list.innerHTML = `<div class="error">${data.error}</div>`; return; }
+    if (!data.length) { list.innerHTML = '<div class="empty-state">No matches found on Tippmix right now.</div>'; return; }
+
+    const wc    = data.filter(m => m.is_wc);
+    const other = data.filter(m => !m.is_wc);
+    const valCount = data.filter(m => m.has_value).length;
+
+    list.innerHTML = `<div style="font-size:0.8rem;color:#555;margin-bottom:16px">
+      ${data.length} matches loaded &nbsp;|&nbsp; ${wc.length} World Cup &nbsp;|&nbsp;
+      <span style="color:#4cff91">${valCount} value bets found</span>
+    </div>`;
+
+    if (wc.length) {
+      list.innerHTML += `<div class="card-title" style="margin-bottom:12px">World Cup 2026</div>`;
+      wc.forEach(m => list.appendChild(buildTippmixRow(m)));
+    }
+    if (other.length) {
+      list.innerHTML += `<div class="card-title" style="margin:20px 0 12px">Other Football</div>`;
+      other.forEach(m => list.appendChild(buildTippmixRow(m)));
+    }
+  } catch(e) {
+    list.innerHTML = `<div class="error">Could not load Tippmix data: ${e.message}</div>`;
+  }
+}
+
+function buildTippmixRow(m) {
+  const hw = (m.home_win*100).toFixed(1);
+  const dr = (m.draw*100).toFixed(1);
+  const aw = (m.away_win*100).toFixed(1);
+  const dt = m.event_date ? new Date(m.event_date).toLocaleString('hu-HU') : '';
+
+  let vchips = '';
+  const vbets = m.value_bets.filter(v => v.value);
+  if (vbets.length) {
+    vchips = '<div class="vbet-mini">' + vbets.map(v =>
+      `<div class="vbet-chip"><span>${v.market}</span>odds ${v.best_odds} &nbsp;+${v.edge_pct}% edge &nbsp;Kelly ${v.kelly_pct}%</div>`
+    ).join('') + '</div>';
+  }
+
+  // Tippmix odds display
+  const oddsRow = `<div style="display:flex;gap:16px;font-size:0.82rem;color:#888;margin-top:8px">
+    <span>1: <b style="color:#e8e8e8">${m.home_odds}</b></span>
+    <span>X: <b style="color:#e8e8e8">${m.draw_odds}</b></span>
+    <span>2: <b style="color:#e8e8e8">${m.away_odds}</b></span>
+    <span style="margin-left:8px;color:#555">xG: ${m.exp_home_goals} – ${m.exp_away_goals}</span>
+  </div>`;
+
+  const div = document.createElement('div');
+  div.className = 'match-row' + (m.has_value ? ' has-value' : '');
+  div.innerHTML = `
+    <div class="match-top">
+      <div>
+        <div class="match-teams">${m.home_team_hu} vs ${m.away_team_hu}</div>
+        <div style="font-size:0.75rem;color:#555;margin-top:2px">${m.competition} &nbsp;·&nbsp; ${dt}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${m.has_value ? '<span class="value-pill">VALUE BET</span>' : ''}
+      </div>
+    </div>
+    <div class="mini-prob">
+      <div style="flex:${hw};background:#2d4a8a"></div>
+      <div style="flex:${dr};background:#2a2a3a"></div>
+      <div style="flex:${aw};background:#3a2020"></div>
+    </div>
+    <div class="mini-probs">
+      <span>${hw}% ${m.home_team}</span>
+      <span>${dr}% Draw</span>
+      <span>${aw}% ${m.away_team}</span>
+    </div>
+    ${oddsRow}
+    ${vchips}`;
+
+  div.onclick = () => {
+    switchTab('predict');
+    document.getElementById('home').value = m.home_team;
+    document.getElementById('away').value = m.away_team;
+    predict(m.home_team, m.away_team, !m.home_team.includes('United States') && !m.home_team.includes('Mexico') && !m.home_team.includes('Canada'));
+  };
+  return div;
 }
 
 // ── Live Matches ──────────────────────────────────────────────────────────

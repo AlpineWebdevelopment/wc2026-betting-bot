@@ -9,6 +9,7 @@ from model import PoissonModel
 from odds import get_wc_odds, best_odds
 from valuebets import find_value_bets
 from config import THE_ODDS_API_KEY, WC_HOSTS
+from tippmix import get_tippmix_matches
 
 app = Flask(__name__)
 
@@ -130,6 +131,50 @@ def live_matches():
         -int(r["has_value"]),
         -max((v["edge_pct"] for v in r["value_bets"]), default=0)
     ))
+    return jsonify(results)
+
+
+@app.route("/tippmix-matches")
+def tippmix_matches():
+    """Fetch live Tippmix.hu odds, run model, return value bets."""
+    try:
+        matches = get_tippmix_matches()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    results = []
+    for m in matches:
+        home, away = m["home_team"], m["away_team"]
+        neutral = home not in WC_HOSTS
+        probs   = _model.predict(home, away, neutral=neutral)
+        tm_odds = {
+            "home_odds": m["home_odds"],
+            "draw_odds": m["draw_odds"],
+            "away_odds": m["away_odds"],
+        }
+        vbets = find_value_bets(probs, tm_odds, home, away)
+        results.append({
+            "home_team":      home,
+            "away_team":      away,
+            "home_team_hu":   m["home_team_hu"],
+            "away_team_hu":   m["away_team_hu"],
+            "competition":    m["competition"],
+            "is_wc":          m["is_wc"],
+            "event_date":     m["event_date"],
+            "home_odds":      m["home_odds"],
+            "draw_odds":      m["draw_odds"],
+            "away_odds":      m["away_odds"],
+            "home_win":       round(probs["home_win"], 4),
+            "draw":           round(probs["draw"],     4),
+            "away_win":       round(probs["away_win"], 4),
+            "exp_home_goals": probs["exp_home_goals"],
+            "exp_away_goals": probs["exp_away_goals"],
+            "value_bets":     vbets,
+            "has_value":      any(v["value"] for v in vbets),
+        })
+
+    results.sort(key=lambda r: (-int(r["is_wc"]), -int(r["has_value"]),
+                                 -max((v["edge_pct"] for v in r["value_bets"]), default=0)))
     return jsonify(results)
 
 
