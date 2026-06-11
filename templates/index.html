@@ -406,7 +406,6 @@ function buildTippmixRow(m) {
   const aw = (m.away_win*100).toFixed(1);
   const dt = m.event_date ? new Date(m.event_date).toLocaleString('hu-HU') : '';
 
-  // Tippmix odds row
   const oddsRow = `<div style="display:flex;gap:16px;font-size:0.82rem;color:#888;margin-top:10px;flex-wrap:wrap">
     <span>1 (hazai): <b style="color:#e8e8e8">${m.home_odds}</b></span>
     <span>X (döntetlen): <b style="color:#e8e8e8">${m.draw_odds}</b></span>
@@ -414,45 +413,78 @@ function buildTippmixRow(m) {
     <span style="color:#555">xG: ${m.exp_home_goals} – ${m.exp_away_goals}</span>
   </div>`;
 
-  // Value bet action cards
-  const vbets = m.value_bets.filter(v => v.value);
+  // Value bet action cards — all markets
+  const vbets = (m.value_bets || []).filter(v => v.value);
   let actionCards = '';
   if (vbets.length) {
-    actionCards = '<div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">';
+    actionCards = `<div style="margin-top:14px">
+      <div style="font-size:0.72rem;color:#4cff91;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px">
+        ${vbets.length} VALUE BET TALALT
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">`;
     for (const v of vbets) {
-      const stake    = Math.round(bankroll * v.kelly_pct / 100 / 100) * 100; // round to nearest 100 Ft
+      const stake    = Math.round(bankroll * v.kelly_pct / 100 / 100) * 100;
       const stakeMin = Math.max(stake, 100);
       const payout   = Math.round(stakeMin * v.best_odds);
       const profit   = payout - stakeMin;
-
-      // What label to show on Tippmix
-      const tippmixLabel = v.market === 'Home Win'  ? `"1" (${m.home_team_hu})` :
-                           v.market === 'Away Win'  ? `"2" (${m.away_team_hu})` :
-                           `"X" (döntetlen)`;
-
+      const groupTag = v.market_group ? `<span style="font-size:0.7rem;color:#555;margin-left:8px">[${v.market_group}]</span>` : '';
       actionCards += `
-        <div style="background:#0a1a0a;border:1px solid #1a4a1a;border-radius:10px;padding:14px 16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-            <div>
-              <div style="font-size:0.75rem;color:#4cff91;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:4px">Tedd meg ezt a fogadast</div>
-              <div style="font-size:1.05rem;font-weight:700;color:#fff">Kattints: ${tippmixLabel}</div>
-              <div style="font-size:0.82rem;color:#888;margin-top:3px">${m.home_team_hu} vs ${m.away_team_hu} &nbsp;·&nbsp; odds: <b style="color:#e8e8e8">${v.best_odds}</b></div>
+        <div style="background:#0a1a0a;border:1px solid #1a4a1a;border-radius:10px;padding:12px 16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:0.78rem;color:#666;margin-bottom:3px">${v.market}${groupTag}</div>
+              <div style="font-size:1.0rem;font-weight:700;color:#fff;word-break:break-word">${v.outcome}</div>
+              <div style="font-size:0.8rem;color:#888;margin-top:4px">
+                odds: <b style="color:#e8e8e8">${v.best_odds}</b>
+                &nbsp;|&nbsp; modell: <b style="color:#aaa">${v.model_prob}%</b>
+                &nbsp;|&nbsp; Tippmix: <b style="color:#aaa">${v.implied_prob}%</b>
+                &nbsp;|&nbsp; edge: <b style="color:#4cff91">+${v.edge_pct}%</b>
+              </div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:1.5rem;font-weight:800;color:#4cff91">${stakeMin.toLocaleString('hu-HU')} Ft</div>
-              <div style="font-size:0.75rem;color:#555">tét (Kelly ${v.kelly_pct}%)</div>
+            <div style="text-align:right;white-space:nowrap">
+              <div style="font-size:1.4rem;font-weight:800;color:#4cff91">${stakeMin.toLocaleString('hu-HU')} Ft</div>
+              <div style="font-size:0.72rem;color:#555">Kelly ${v.kelly_pct}%</div>
+              <div style="font-size:0.75rem;color:#555;margin-top:2px">+${profit.toLocaleString('hu-HU')} Ft profit</div>
             </div>
-          </div>
-          <div style="display:flex;gap:20px;margin-top:10px;padding-top:10px;border-top:1px solid #1a3a1a;font-size:0.82rem;flex-wrap:wrap">
-            <span style="color:#555">Várható nyeremény: <b style="color:#e8e8e8">${payout.toLocaleString('hu-HU')} Ft</b></span>
-            <span style="color:#555">Várható profit: <b style="color:#4cff91">+${profit.toLocaleString('hu-HU')} Ft</b></span>
-            <span style="color:#555">Modell edge: <b style="color:#4cff91">+${v.edge_pct}%</b></span>
-            <span style="color:#555">Modell: <b style="color:#aaa">${v.model_prob}% vs Tippmix: ${v.implied_prob}%</b></span>
           </div>
         </div>`;
     }
-    actionCards += '</div>';
+    actionCards += '</div></div>';
   }
+
+  // All predictions table (collapsible) for WC matches
+  let allMarketsSection = '';
+  const allPreds = (m.value_bets || []).filter(v => !v.value && v.model_prob > 0);
+  if (allPreds.length && m.is_wc) {
+    const uid = 'mkt_' + Math.random().toString(36).slice(2);
+    allMarketsSection = `
+      <div style="margin-top:12px">
+        <button onclick="toggleSection('${uid}')" style="background:transparent;border:1px solid #2a2a3a;color:#555;border-radius:6px;padding:5px 12px;font-size:0.75rem;cursor:pointer">
+          + ${allPreds.length} tovabbi piac megtekintese
+        </button>
+        <div id="${uid}" style="display:none;margin-top:10px;overflow-x:auto">
+          <table style="font-size:0.78rem">
+            <thead><tr>
+              <th>Piac</th><th>Kimenetel</th><th>Odds</th>
+              <th>Modell%</th><th>Impl%</th><th>Edge%</th>
+            </tr></thead>
+            <tbody>
+              ${allPreds.slice(0,60).map(v => `<tr>
+                <td style="color:#666;max-width:180px;word-break:break-word">${v.market}</td>
+                <td style="max-width:160px;word-break:break-word">${v.outcome}</td>
+                <td>${v.best_odds}</td>
+                <td>${v.model_prob}%</td>
+                <td>${v.implied_prob}%</td>
+                <td class="${v.edge_pct >= 0 ? 'edge-pos' : 'edge-neg'}">${v.edge_pct >= 0 ? '+' : ''}${v.edge_pct}%</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  const totalMarkets = (m.value_bets || []).length;
+  const totalValue   = (m.value_bets || []).filter(v => v.value).length;
 
   const div = document.createElement('div');
   div.className = 'match-row' + (m.has_value ? ' has-value' : '');
@@ -461,9 +493,15 @@ function buildTippmixRow(m) {
     <div class="match-top">
       <div>
         <div class="match-teams">${m.home_team_hu} vs ${m.away_team_hu}</div>
-        <div style="font-size:0.75rem;color:#555;margin-top:2px">${m.competition} &nbsp;·&nbsp; ${dt}</div>
+        <div style="font-size:0.75rem;color:#555;margin-top:2px">
+          ${m.competition} &nbsp;·&nbsp; ${dt}
+          ${m.is_wc ? '&nbsp;·&nbsp;<span style="color:#6b7aff">VB 2026</span>' : ''}
+          ${totalMarkets > 0 ? `&nbsp;·&nbsp;<span style="color:#555">${totalMarkets} piac elemezve</span>` : ''}
+        </div>
       </div>
-      ${m.has_value ? '<span class="value-pill">VALUE BET</span>' : '<span style="color:#333;font-size:0.75rem">nincs edge</span>'}
+      ${m.has_value
+        ? `<span class="value-pill">${totalValue} VALUE BET</span>`
+        : '<span style="color:#333;font-size:0.75rem">nincs edge</span>'}
     </div>
     <div class="mini-prob">
       <div style="flex:${hw};background:#2d4a8a"></div>
@@ -476,9 +514,15 @@ function buildTippmixRow(m) {
       <span>${aw}% ${m.away_team}</span>
     </div>
     ${oddsRow}
-    ${actionCards}`;
+    ${actionCards}
+    ${allMarketsSection}`;
 
   return div;
+}
+
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 // ── Live Matches ──────────────────────────────────────────────────────────

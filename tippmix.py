@@ -136,6 +136,21 @@ def _parse_events(data: dict) -> list[dict]:
     return matches
 
 
+async def _fetch_event_markets(page, event_id: int) -> list[dict]:
+    """Fetch full market groups for a single event via the in-browser fetch."""
+    try:
+        result = await page.evaluate(f"""
+            async () => {{
+                const r = await fetch('https://api.tippmix.hu/v2/tippmix/event/{event_id}',
+                    {{headers: {{Accept: 'application/json'}}}});
+                return await r.json();
+            }}
+        """)
+        return result.get("event", {}).get("marketGroups", [])
+    except Exception:
+        return []
+
+
 async def _fetch_via_playwright() -> list[dict]:
     saved = {}
     async with async_playwright() as p:
@@ -160,20 +175,38 @@ async def _fetch_via_playwright() -> list[dict]:
             await asyncio.sleep(5)
         except:
             pass
+
+        # Parse initial events list
+        base_matches = []
+        for key in ["best-games", "last-minute"]:
+            if key in saved:
+                base_matches = _parse_events(saved[key])
+                break
+
+        # Fetch full market data for WC matches in parallel
+        wc = [m for m in base_matches if m.get("is_wc") and m.get("event_id")]
+        if wc:
+            market_groups_list = await asyncio.gather(
+                *[_fetch_event_markets(page, m["event_id"]) for m in wc],
+                return_exceptions=True,
+            )
+            for m, mgs in zip(wc, market_groups_list):
+                m["market_groups"] = mgs if isinstance(mgs, list) else []
+
+        for m in base_matches:
+            if "market_groups" not in m:
+                m["market_groups"] = []
+
         await browser.close()
 
-    # Prefer best-games (curated), fall back to last-minute
-    for key in ["best-games", "last-minute"]:
-        if key in saved:
-            return _parse_events(saved[key])
-    return []
+    return base_matches
 
 
 def get_tippmix_matches() -> list[dict]:
-    """Synchronous wrapper — returns list of WC matches with Tippmix odds."""
+    """Synchronous wrapper — returns football matches with Tippmix odds and full market data for WC."""
     print("  Fetching Tippmix.hu odds via browser...")
     matches = asyncio.run(_fetch_via_playwright())
     wc = [m for m in matches if m["is_wc"]]
-    all_football = [m for m in matches if not m["is_wc"]]
-    print(f"  Got {len(wc)} WC matches + {len(all_football)} other football matches from Tippmix")
+    other = [m for m in matches if not m["is_wc"]]
+    print(f"  Got {len(wc)} WC matches + {len(other)} other football matches from Tippmix")
     return matches

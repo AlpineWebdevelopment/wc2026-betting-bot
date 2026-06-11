@@ -121,4 +121,5 @@ class PoissonModel:
             "away_win": away_win,
             "exp_home_goals": round(exp_h, 2),
             "exp_away_goals": round(exp_a, 2),
+            "score_matrix": matrix.tolist(),
         }

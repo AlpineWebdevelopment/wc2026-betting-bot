@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, jsonify
 from data import fetch_data
 from model import PoissonModel
 from odds import get_wc_odds, best_odds
-from valuebets import find_value_bets
+from valuebets import find_value_bets, find_all_value_bets
 from config import THE_ODDS_API_KEY, WC_HOSTS
 from tippmix import get_tippmix_matches
 
@@ -88,7 +88,7 @@ def predict():
         "exp_home_goals":  probs["exp_home_goals"],
         "exp_away_goals":  probs["exp_away_goals"],
         "value_bets":      value_bets,
-    })
+    })  # score_matrix intentionally excluded from public response
 
 
 @app.route("/teams")
@@ -147,12 +147,22 @@ def tippmix_matches():
         home, away = m["home_team"], m["away_team"]
         neutral = home not in WC_HOSTS
         probs   = _model.predict(home, away, neutral=neutral)
-        tm_odds = {
-            "home_odds": m["home_odds"],
-            "draw_odds": m["draw_odds"],
-            "away_odds": m["away_odds"],
-        }
-        vbets = find_value_bets(probs, tm_odds, home, away)
+
+        market_groups = m.get("market_groups", [])
+        if m.get("is_wc") and market_groups:
+            # Full market analysis for WC matches
+            vbets = find_all_value_bets(
+                market_groups, probs, m["home_team_hu"], m["away_team_hu"]
+            )
+        else:
+            # 1X2 only for non-WC / missing market data
+            tm_odds = {
+                "home_odds": m["home_odds"],
+                "draw_odds": m["draw_odds"],
+                "away_odds": m["away_odds"],
+            }
+            vbets = find_value_bets(probs, tm_odds, home, away)
+
         results.append({
             "home_team":      home,
             "away_team":      away,
