@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+.env.local
+results_cache.csv
+probe_*.html
+probe_*.png
+probe_*.json
+*.output
