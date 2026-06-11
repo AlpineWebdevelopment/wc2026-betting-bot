@@ -49,20 +49,22 @@ def find_value_bets(probs: dict, odds: dict, home: str, away: str) -> list[dict]
 
 def _make_vbet(market_name: str, outcome_name: str, decimal_odds: float,
                model_prob: float, group_name: str = "") -> dict:
+    model_prob   = float(model_prob)
+    decimal_odds = float(decimal_odds)
     implied_prob = 1.0 / decimal_odds
-    edge_pct = (model_prob - implied_prob) * 100
-    kelly = max(0.0, (model_prob * decimal_odds - 1.0) / (decimal_odds - 1.0))
+    edge_pct     = (model_prob - implied_prob) * 100
+    kelly        = max(0.0, (model_prob * decimal_odds - 1.0) / (decimal_odds - 1.0))
     return {
-        "market":       market_name,
-        "market_group": group_name,
-        "outcome":      outcome_name,
-        "model_prob":   round(model_prob * 100, 1),
-        "implied_prob": round(implied_prob * 100, 1),
+        "market":       str(market_name),
+        "market_group": str(group_name),
+        "outcome":      str(outcome_name),
+        "model_prob":   float(round(model_prob * 100, 1)),
+        "implied_prob": float(round(implied_prob * 100, 1)),
         "best_odds":    decimal_odds,
-        "fair_odds":    round(1.0 / model_prob, 2) if model_prob > 0 else None,
-        "edge_pct":     round(edge_pct, 1),
-        "kelly_pct":    round(kelly * 100, 1),
-        "value":        edge_pct >= MIN_EDGE_PCT,
+        "fair_odds":    float(round(1.0 / model_prob, 2)) if model_prob > 0 else None,
+        "edge_pct":     float(round(edge_pct, 1)),
+        "kelly_pct":    float(round(kelly * 100, 1)),
+        "value":        bool(edge_pct >= MIN_EDGE_PCT),
     }
 
 
@@ -95,7 +97,7 @@ def find_all_value_bets(
     exp_a = probs["exp_away_goals"]
 
     results = []
-    seen_markets = set()  # deduplicate markets shown in multiple groups
+    seen_markets = set()  # deduplicate: same market can appear in multiple groups
 
     for group in market_groups:
         group_name = group.get("name", "")
@@ -112,11 +114,10 @@ def find_all_value_bets(
             if any(s in ml for s in _SKIP_MARKET_SUBSTRINGS):
                 continue
 
-            # Deduplicate (same market appears in multiple groups)
-            dedup_key = (market_name, group_name)
-            if dedup_key in seen_markets:
+            # Deduplicate by market name — many markets repeated across groups
+            if market_name in seen_markets:
                 continue
-            seen_markets.add(dedup_key)
+            seen_markets.add(market_name)
 
             outcomes = market.get("outcomes", [])
 
