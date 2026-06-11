@@ -12,10 +12,14 @@ from config import THE_ODDS_API_KEY, WC_HOSTS
 
 app = Flask(__name__)
 
-# ── Boot: load data & fit model once at startup ──────────────────────────────
+# ── Boot: load pre-trained params (fast) or train from scratch ───────────────
 print("\nBooting WC 2026 Betting Model...")
-_df    = fetch_data()
-_model = PoissonModel().fit(_df)
+import os as _os
+if _os.path.exists("model_params.json"):
+    _model = PoissonModel.load("model_params.json")
+else:
+    _df    = fetch_data()
+    _model = PoissonModel().fit(_df)
 _live_odds: dict[str, dict] = {}   # "HomeTeam|AwayTeam" -> match dict
 
 def _refresh_odds():

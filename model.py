@@ -19,6 +19,20 @@ class PoissonModel:
         self._avg_attack = 0.0
         self._avg_defense = 0.0
 
+    @classmethod
+    def load(cls, path: str = "model_params.json"):
+        import json
+        with open(path) as f:
+            data = json.load(f)
+        m = cls()
+        m.teams = data["teams"]
+        m.team_idx = {t: i for i, t in enumerate(m.teams)}
+        m.params = np.array(data["params"])
+        m._avg_attack = data["avg_attack"]
+        m._avg_defense = data["avg_defense"]
+        print(f"  Loaded pre-trained model ({len(m.teams)} teams)")
+        return m
+
     # ------------------------------------------------------------------
     def fit(self, df: pd.DataFrame):
         teams = sorted(set(df["home_team"]) | set(df["away_team"]))
