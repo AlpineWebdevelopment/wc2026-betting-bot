@@ -1,11 +1,22 @@
 """
 Tippmix.hu odds fetcher.
-Uses Playwright to load tippmix.hu and intercept the API — no scraping, clean JSON.
-Maps Hungarian team names to English for the Poisson model.
+Calls the public tippmix.hu JSON API directly with `requests` — no browser needed.
+The list endpoints (best-games / last-minute) are POST; the per-event market
+endpoint is GET. Maps Hungarian team names to English for the Poisson model.
 """
-import asyncio, json
-from datetime import datetime
-from playwright.async_api import async_playwright
+import requests
+from concurrent.futures import ThreadPoolExecutor
+
+API_BASE = "https://api.tippmix.hu"
+
+# tippmix's API rejects requests without these (the list endpoints 404 otherwise).
+_HEADERS = {
+    "Accept": "application/json, text/plain, */*",
+    "Content-Type": "application/json;charset=UTF-8",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+    "Referer": "https://www.tippmix.hu/",
+    "Accept-Language": "hu-HU",
+}
 
 # Hungarian name → English name mapping for WC 2026 teams
 HU_TO_EN: dict[str, str] = {
@@ -136,77 +147,47 @@ def _parse_events(data: dict) -> list[dict]:
     return matches
 
 
-async def _fetch_event_markets(page, event_id: int) -> list[dict]:
-    """Fetch full market groups for a single event via the in-browser fetch."""
+def _fetch_event_markets(event_id: int) -> list[dict]:
+    """Fetch full market groups for a single event (GET /v2/tippmix/event/{id})."""
     try:
-        result = await page.evaluate(f"""
-            async () => {{
-                const r = await fetch('https://api.tippmix.hu/v2/tippmix/event/{event_id}',
-                    {{headers: {{Accept: 'application/json'}}}});
-                return await r.json();
-            }}
-        """)
-        return result.get("event", {}).get("marketGroups", [])
+        r = requests.get(f"{API_BASE}/v2/tippmix/event/{event_id}",
+                         headers=_HEADERS, timeout=20)
+        r.raise_for_status()
+        return r.json().get("event", {}).get("marketGroups", [])
     except Exception:
         return []
 
 
-async def _fetch_via_playwright() -> list[dict]:
-    saved = {}
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        ctx = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            locale="hu-HU",
-        )
-
-        async def on_response(resp):
-            for target in ["best-games", "last-minute"]:
-                if target in resp.url and resp.status == 200 and target not in saved:
-                    try:
-                        saved[target] = await resp.json()
-                    except:
-                        pass
-
-        page = await ctx.new_page()
-        page.on("response", on_response)
+def _fetch_events_list() -> dict | None:
+    """POST the list endpoints (best-games, then last-minute) — first 200 wins."""
+    for path in ("/tippmix/best-games", "/tippmix/last-minute"):
         try:
-            await page.goto("https://www.tippmix.hu", wait_until="domcontentloaded", timeout=15000)
-            await asyncio.sleep(5)
-        except:
-            pass
-
-        # Parse initial events list
-        base_matches = []
-        for key in ["best-games", "last-minute"]:
-            if key in saved:
-                base_matches = _parse_events(saved[key])
-                break
-
-        # Fetch full market data for WC matches in parallel
-        wc = [m for m in base_matches if m.get("is_wc") and m.get("event_id")]
-        if wc:
-            market_groups_list = await asyncio.gather(
-                *[_fetch_event_markets(page, m["event_id"]) for m in wc],
-                return_exceptions=True,
-            )
-            for m, mgs in zip(wc, market_groups_list):
-                m["market_groups"] = mgs if isinstance(mgs, list) else []
-
-        for m in base_matches:
-            if "market_groups" not in m:
-                m["market_groups"] = []
-
-        await browser.close()
-
-    return base_matches
+            r = requests.post(f"{API_BASE}{path}", headers=_HEADERS, json={}, timeout=20)
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
+            continue
+    return None
 
 
 def get_tippmix_matches() -> list[dict]:
-    """Synchronous wrapper — returns football matches with Tippmix odds and full market data for WC."""
-    print("  Fetching Tippmix.hu odds via browser...")
-    matches = asyncio.run(_fetch_via_playwright())
-    wc = [m for m in matches if m["is_wc"]]
-    other = [m for m in matches if not m["is_wc"]]
+    """Returns football matches with Tippmix odds and full market data for WC matches."""
+    print("  Fetching Tippmix.hu odds via API...")
+    data = _fetch_events_list()
+    base_matches = _parse_events(data) if data else []
+
+    # Fetch full market data for WC matches in parallel (keeps us well under
+    # Vercel's request time limit even with a dozen WC fixtures).
+    wc = [m for m in base_matches if m.get("is_wc") and m.get("event_id")]
+    if wc:
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            groups = list(ex.map(lambda m: _fetch_event_markets(m["event_id"]), wc))
+        for m, mgs in zip(wc, groups):
+            m["market_groups"] = mgs
+
+    for m in base_matches:
+        m.setdefault("market_groups", [])
+
+    other = [m for m in base_matches if not m["is_wc"]]
     print(f"  Got {len(wc)} WC matches + {len(other)} other football matches from Tippmix")
-    return matches
+    return base_matches

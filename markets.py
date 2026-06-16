@@ -4,7 +4,7 @@ Derived from the Poisson score matrix (home goals x away goals joint PMF).
 """
 import re
 import numpy as np
-from scipy.stats import poisson
+from stats import poisson_pmf
 
 HT_FRAC = 0.42   # fraction of total xG that occurs in the 1st half
 
@@ -17,7 +17,7 @@ MAX_G = 10       # goals cap (matches config.MAX_GOALS)
 
 def _half_matrix(exp_h: float, exp_a: float, frac: float) -> np.ndarray:
     g = np.arange(0, MAX_G + 1)
-    return np.outer(poisson.pmf(g, frac * exp_h), poisson.pmf(g, frac * exp_a))
+    return np.outer(poisson_pmf(g, frac * exp_h), poisson_pmf(g, frac * exp_a))
 
 
 def _ou(m: np.ndarray, line: float) -> tuple[float, float]:
@@ -667,16 +667,16 @@ def compute_market_probs(
         _cm = re.match(rf"^{re.escape(_corn_prefix)} (\d+),5$", name)
         if _cm:
             _line = int(_cm.group(1)) + 0.5
-            _pmf = poisson.pmf(_k25, _corn_lam)
+            _pmf = poisson_pmf(_k25, _corn_lam)
             _over = float(_pmf[int(_line + 0.5):].sum())
             return {0: 1.0 - _over, 1: _over}
 
     # Corner count ranges  [0-8, 9-11, 12+]
     if name == "Szögletek száma":
-        _pmf = poisson.pmf(_k25, _corn_total)
+        _pmf = poisson_pmf(_k25, _corn_total)
         return {0: float(_pmf[:9].sum()), 1: float(_pmf[9:12].sum()), 2: float(_pmf[12:].sum())}
     if name == "1. félidő - Szögletek száma":
-        _pmf = poisson.pmf(_k25, _ht_corn_total)
+        _pmf = poisson_pmf(_k25, _ht_corn_total)
         return {0: float(_pmf[:5].sum()), 1: float(_pmf[5:7].sum()), 2: float(_pmf[7:].sum())}
 
     # Home / away corner O/U (e.g. "Hazai csapat szögletszám 5,5")
@@ -687,7 +687,7 @@ def compute_market_probs(
         _cm = re.match(rf"^{re.escape(_corn_prefix)} (\d+),5$", name)
         if _cm:
             _line = int(_cm.group(1)) + 0.5
-            _pmf = poisson.pmf(_k25, _corn_lam)
+            _pmf = poisson_pmf(_k25, _corn_lam)
             _over = float(_pmf[int(_line + 0.5):].sum())
             return {0: 1.0 - _over, 1: _over}
 
@@ -697,7 +697,7 @@ def compute_market_probs(
         ("Vendégcsapat szögleteinek száma", _corn_a),
     ]:
         if name == _corn_mkt:
-            _pmf = poisson.pmf(_k25, _corn_lam)
+            _pmf = poisson_pmf(_k25, _corn_lam)
             return {
                 0: float(_pmf[:3].sum()),
                 1: float(_pmf[3:5].sum()),
@@ -714,8 +714,8 @@ def compute_market_probs(
         if _cm:
             _lint = int(_cm.group(1))
             _lval = _lint + (-0.5 if _lint < 0 else 0.5)  # e.g. -3 → -3.5
-            _ph = poisson.pmf(_k25, _corn_lam_h)
-            _pa = poisson.pmf(_k25, _corn_lam_a)
+            _ph = poisson_pmf(_k25, _corn_lam_h)
+            _pa = poisson_pmf(_k25, _corn_lam_a)
             _hp = _ap = 0.0
             for _ci, _pv in enumerate(_ph):
                 for _cj, _pva in enumerate(_pa):
@@ -731,8 +731,8 @@ def compute_market_probs(
         ("1. félidő - Melyik csapat végez el több szögletet?", _ht_corn_h, _ht_corn_a),
     ]:
         if name == _corn_mkt:
-            _ph = poisson.pmf(_k25, _corn_lam_h)
-            _pa = poisson.pmf(_k25, _corn_lam_a)
+            _ph = poisson_pmf(_k25, _corn_lam_h)
+            _pa = poisson_pmf(_k25, _corn_lam_a)
             _p_hm = _p_eq = _p_am = 0.0
             for _ci, _pv in enumerate(_ph):
                 for _cj, _pva in enumerate(_pa):
@@ -744,7 +744,7 @@ def compute_market_probs(
 
     # Corner odd/even
     if name == "Szögletszám: páros vagy páratlan":
-        _pmf = poisson.pmf(_k25, _corn_total)
+        _pmf = poisson_pmf(_k25, _corn_total)
         _odd = float(_pmf[1::2].sum())
         return {0: _odd, 1: 1.0 - _odd}
 
@@ -758,7 +758,7 @@ def compute_market_probs(
     _cm = re.match(r"^Lesszám (\d+),5$", name)
     if _cm:
         _line = int(_cm.group(1)) + 0.5
-        _pmf = poisson.pmf(_k20, _offs_h + _offs_a)
+        _pmf = poisson_pmf(_k20, _offs_h + _offs_a)
         _over = float(_pmf[int(_line + 0.5):].sum())
         return {0: 1.0 - _over, 1: _over}
 
@@ -770,7 +770,7 @@ def compute_market_probs(
         _cm = re.match(rf"^{re.escape(_off_prefix)} (\d+),5$", name)
         if _cm:
             _line = int(_cm.group(1)) + 0.5
-            _pmf = poisson.pmf(_k20, _off_lam)
+            _pmf = poisson_pmf(_k20, _off_lam)
             _over = float(_pmf[int(_line + 0.5):].sum())
             return {0: 1.0 - _over, 1: _over}
 

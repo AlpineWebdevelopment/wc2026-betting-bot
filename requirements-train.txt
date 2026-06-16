@@ -1,0 +1,6 @@
+# Local model-training deps. NOT needed on Vercel — the server loads the
+# pre-trained model_params.json. Run `python precompute.py` after installing
+# these (plus the runtime requirements) to regenerate model_params.json.
+-r requirements.txt
+pandas>=2.0.0
+scipy>=1.11.0

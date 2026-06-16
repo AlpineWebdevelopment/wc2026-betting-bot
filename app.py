@@ -4,7 +4,6 @@ Run: python app.py
 """
 
 from flask import Flask, render_template, request, jsonify
-from data import fetch_data
 from model import PoissonModel
 from odds import get_wc_odds, best_odds
 from valuebets import find_value_bets, find_all_value_bets
@@ -16,9 +15,12 @@ app = Flask(__name__)
 # ── Boot: load pre-trained params (fast) or train from scratch ───────────────
 print("\nBooting WC 2026 Betting Model...")
 import os as _os
-if _os.path.exists("model_params.json"):
-    _model = PoissonModel.load("model_params.json")
+_PARAMS_PATH = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "model_params.json")
+if _os.path.exists(_PARAMS_PATH):
+    _model = PoissonModel.load(_PARAMS_PATH)
 else:
+    # Training path (local only) — pulls in pandas/scipy via data.py.
+    from data import fetch_data
     _df    = fetch_data()
     _model = PoissonModel().fit(_df)
 _live_odds: dict[str, dict] = {}   # "HomeTeam|AwayTeam" -> match dict

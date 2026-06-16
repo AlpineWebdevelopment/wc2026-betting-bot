@@ -4,10 +4,8 @@ Attack/defense ratings are estimated via maximum likelihood.
 """
 
 import numpy as np
-import pandas as pd
-from scipy.stats import poisson
-from scipy.optimize import minimize
 from datetime import datetime
+from stats import poisson_pmf
 from config import MAX_GOALS, TIME_DECAY, WC_HOSTS
 
 
@@ -34,7 +32,11 @@ class PoissonModel:
         return m
 
     # ------------------------------------------------------------------
-    def fit(self, df: pd.DataFrame):
+    def fit(self, df):
+        # Training-only deps — kept out of the serverless runtime bundle
+        from scipy.stats import poisson
+        from scipy.optimize import minimize
+
         teams = sorted(set(df["home_team"]) | set(df["away_team"]))
         self.teams = teams
         self.team_idx = {t: i for i, t in enumerate(teams)}
@@ -107,8 +109,8 @@ class PoissonModel:
         exp_a = np.exp(mu + _atk(away_team) - _dfn(home_team))
 
         goals = np.arange(0, MAX_GOALS + 1)
-        ph = poisson.pmf(goals, exp_h)
-        pa = poisson.pmf(goals, exp_a)
+        ph = poisson_pmf(goals, exp_h)
+        pa = poisson_pmf(goals, exp_a)
         matrix = np.outer(ph, pa)
 
         home_win = float(np.sum(np.tril(matrix, -1)))
