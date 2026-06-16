@@ -1,5 +1,5 @@
 # Runtime deps (what Vercel installs to serve predictions).
-# Training-only deps (pandas, scipy) live in requirements-train.txt.
 flask>=3.0.0
 requests>=2.32.0
 numpy>=1.26.0
+scipy>=1.11.0

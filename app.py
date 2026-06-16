@@ -41,28 +41,28 @@ def _refresh_odds():
 _refresh_odds()
 print("Model ready.\n")
 
-# ── Background cache for Tippmix live odds (Playwright is too slow for inline) ──
+# ── In-memory cache for Tippmix live odds (TTL-based, works on both local + Vercel) ──
 _tippmix_live_cache: list[dict] = []
 _tippmix_live_lock  = threading.Lock()
-_tippmix_live_ts    = 0.0   # last successful fetch timestamp
-_TIPPMIX_LIVE_TTL   = 120   # refresh every 2 minutes
+_tippmix_live_ts    = 0.0
+_TIPPMIX_LIVE_TTL   = 120   # seconds before we re-fetch
 
 
-def _tippmix_live_worker():
+def _get_tippmix_live_cached() -> tuple[list[dict], float | None]:
+    """Return cached live odds, refreshing if stale. Safe for serverless."""
     global _tippmix_live_cache, _tippmix_live_ts
-    while True:
-        try:
-            data = get_tippmix_live_odds()
-            with _tippmix_live_lock:
+    now = _time.time()
+    with _tippmix_live_lock:
+        age = round(now - _tippmix_live_ts) if _tippmix_live_ts else None
+        if not _tippmix_live_ts or now - _tippmix_live_ts > _TIPPMIX_LIVE_TTL:
+            try:
+                data = get_tippmix_live_odds()
                 _tippmix_live_cache = data
-                _tippmix_live_ts    = _time.time()
-        except Exception as e:
-            print(f"  [live cache] Tippmix live fetch failed: {e}")
-        _time.sleep(_TIPPMIX_LIVE_TTL)
-
-
-_live_cache_thread = threading.Thread(target=_tippmix_live_worker, daemon=True)
-_live_cache_thread.start()
+                _tippmix_live_ts    = now
+                age = 0
+            except Exception as e:
+                print(f"  [live cache] Tippmix live fetch failed: {e}")
+        return list(_tippmix_live_cache), age
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -226,10 +226,7 @@ def live_wc_matches():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    # Use cached Tippmix live odds (updated every 2 min by background thread)
-    with _tippmix_live_lock:
-        tippmix_live = list(_tippmix_live_cache)
-    cache_age = round(_time.time() - _tippmix_live_ts) if _tippmix_live_ts else None
+    tippmix_live, cache_age = _get_tippmix_live_cached()
 
     # Index Tippmix live matches by team pair for fast lookup
     def _tkey(h, a):
