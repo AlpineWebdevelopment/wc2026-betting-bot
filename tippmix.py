@@ -154,7 +154,7 @@ async def _fetch_event_markets(page, event_id: int) -> list[dict]:
 async def _fetch_via_playwright() -> list[dict]:
     saved = {}
     async with async_playwright() as p:
-        browser = await p.chromium.launch(channel="chrome", headless=True)
+        browser = await p.chromium.launch(headless=True)
         ctx = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             locale="hu-HU",
