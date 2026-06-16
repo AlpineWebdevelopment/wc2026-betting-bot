@@ -67,8 +67,15 @@ def _get_tippmix_live_cached() -> tuple[list[dict], float | None]:
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
+_MAINTENANCE = _os.environ.get("MAINTENANCE", "").lower() in ("1", "true", "yes")
+
 @app.route("/")
 def index():
+    if _MAINTENANCE:
+        return """<!DOCTYPE html><html><head><meta charset="utf-8"><title>Karbantartás</title>
+<style>body{background:#060d1a;color:#a0b0ff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:16px}
+h1{font-size:2rem;color:#fff;margin:0}p{color:#555;margin:0}</style></head>
+<body><h1>🔧 Karbantartás alatt</h1><p>Hamarosan visszatérünk.</p></body></html>""", 503
     return render_template("index.html")
 
 
