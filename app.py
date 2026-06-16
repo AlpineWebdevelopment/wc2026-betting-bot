@@ -3,12 +3,17 @@ Flask web server — serves the WC 2026 betting model on localhost:3000
 Run: python app.py
 """
 
+import threading
+import time as _time
+
 from flask import Flask, render_template, request, jsonify
 from model import PoissonModel
 from odds import get_wc_odds, best_odds
 from valuebets import find_value_bets, find_all_value_bets
-from config import THE_ODDS_API_KEY, WC_HOSTS
-from tippmix import get_tippmix_matches
+from config import THE_ODDS_API_KEY, WC_HOSTS, TELEGRAM_BANKROLL
+from tippmix import get_tippmix_matches, get_tippmix_live_odds
+from sofascore import get_live_wc_matches
+from live_model import live_probs, live_value_bets, find_live_value_bets_from_markets
 
 app = Flask(__name__)
 
@@ -35,6 +40,29 @@ def _refresh_odds():
 
 _refresh_odds()
 print("Model ready.\n")
+
+# ── Background cache for Tippmix live odds (Playwright is too slow for inline) ──
+_tippmix_live_cache: list[dict] = []
+_tippmix_live_lock  = threading.Lock()
+_tippmix_live_ts    = 0.0   # last successful fetch timestamp
+_TIPPMIX_LIVE_TTL   = 120   # refresh every 2 minutes
+
+
+def _tippmix_live_worker():
+    global _tippmix_live_cache, _tippmix_live_ts
+    while True:
+        try:
+            data = get_tippmix_live_odds()
+            with _tippmix_live_lock:
+                _tippmix_live_cache = data
+                _tippmix_live_ts    = _time.time()
+        except Exception as e:
+            print(f"  [live cache] Tippmix live fetch failed: {e}")
+        _time.sleep(_TIPPMIX_LIVE_TTL)
+
+
+_live_cache_thread = threading.Thread(target=_tippmix_live_worker, daemon=True)
+_live_cache_thread.start()
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -188,6 +216,82 @@ def tippmix_matches():
     results.sort(key=lambda r: (-int(r["is_wc"]), -int(r["has_value"]),
                                  -max((v["edge_pct"] for v in r["value_bets"]), default=0)))
     return jsonify(results)
+
+
+@app.route("/live-wc-matches")
+def live_wc_matches():
+    """Fetch live WC matches: ESPN stats + Tippmix live odds → full value bet analysis."""
+    try:
+        espn_matches = get_live_wc_matches()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    # Use cached Tippmix live odds (updated every 2 min by background thread)
+    with _tippmix_live_lock:
+        tippmix_live = list(_tippmix_live_cache)
+    cache_age = round(_time.time() - _tippmix_live_ts) if _tippmix_live_ts else None
+
+    # Index Tippmix live matches by team pair for fast lookup
+    def _tkey(h, a):
+        return f"{h.lower().strip()}|{a.lower().strip()}"
+
+    tippmix_index: dict[str, dict] = {}
+    for tm in tippmix_live:
+        if tm.get("is_wc"):
+            tippmix_index[_tkey(tm["home_team"], tm["away_team"])] = tm
+
+    bankroll = TELEGRAM_BANKROLL
+    results = []
+
+    for m in espn_matches:
+        home, away = m["home_team"], m["away_team"]
+        neutral = home not in WC_HOSTS
+
+        # Pre-match baseline from Poisson model
+        try:
+            pre = _model.predict(home, away, neutral=neutral)
+            pre_xg_h = pre["exp_home_goals"]
+            pre_xg_a = pre["exp_away_goals"]
+        except Exception:
+            pre_xg_h, pre_xg_a = 1.2, 1.0
+
+        # Live probability calculation using ESPN stats
+        lp = live_probs(
+            pre_xg_home=pre_xg_h,
+            pre_xg_away=pre_xg_a,
+            minute=m["minute"] + m.get("extra_time", 0),
+            home_score=m["home_score"],
+            away_score=m["away_score"],
+            live_xg_home=m["xg_home"],
+            live_xg_away=m["xg_away"],
+            red_cards_home=m["red_cards_home"],
+            red_cards_away=m["red_cards_away"],
+            possession_home=m["possession_home"],
+        )
+
+        # Try to find matching Tippmix live event
+        tm_match = tippmix_index.get(_tkey(home, away))
+        has_tippmix_odds = bool(tm_match and tm_match.get("market_groups"))
+
+        if has_tippmix_odds:
+            # Full value bet cards with actual Tippmix odds + Kelly stake
+            live_vbets = find_live_value_bets_from_markets(
+                tm_match["market_groups"], lp, bankroll=bankroll, min_edge=5.0
+            )
+        else:
+            # Fallback: minimum odds table (no Tippmix data yet)
+            live_vbets = live_value_bets(lp, min_edge=5.0)
+
+        results.append({
+            **m,
+            "pre_xg_home":       round(pre_xg_h, 2),
+            "pre_xg_away":       round(pre_xg_a, 2),
+            "live_probs":        lp,
+            "live_bets":         live_vbets,
+            "has_tippmix_odds":  has_tippmix_odds,
+        })
+
+    return jsonify({"matches": results, "tippmix_cache_age": cache_age})
 
 
 if __name__ == "__main__":

@@ -147,6 +147,54 @@ def _parse_events(data: dict) -> list[dict]:
     return matches
 
 
+def _parse_live_events(data: dict) -> list[dict]:
+    """Extract LIVE football matches from a tippmix API response."""
+    matches = []
+    for sport_block in data.get("data", []):
+        if sport_block.get("sportId") != 1:
+            continue
+        for ev in sport_block.get("events", []):
+            if not ev.get("isLive"):
+                continue
+            participants = ev.get("eventParticipants", [])
+            if len(participants) < 2:
+                continue
+
+            home_hu = participants[0]["participantName"]
+            away_hu = participants[1]["participantName"]
+            home_en = _en(home_hu)
+            away_en = _en(away_hu)
+
+            market_1x2 = next(
+                (m for m in ev.get("markets", []) if m.get("marketName") == "1X2"),
+                None
+            )
+            home_odds = draw_odds = away_odds = None
+            if market_1x2:
+                outcomes = {o["outcomeNo"]: o["fixedOdds"] for o in market_1x2.get("outcomes", [])}
+                home_odds = outcomes.get(1)
+                draw_odds = outcomes.get(2)
+                away_odds = outcomes.get(3)
+
+            competition = ev.get("competitionName", "")
+            is_wc = any(c.get("name") == "vb" for c in ev.get("competitions", []))
+
+            matches.append({
+                "home_team_hu": home_hu,
+                "away_team_hu": away_hu,
+                "home_team":    home_en,
+                "away_team":    away_en,
+                "competition":  competition,
+                "is_wc":        is_wc,
+                "home_odds":    home_odds,
+                "draw_odds":    draw_odds,
+                "away_odds":    away_odds,
+                "event_id":     ev.get("eventId"),
+            })
+
+    return matches
+
+
 def _fetch_event_markets(event_id: int) -> list[dict]:
     """Fetch full market groups for a single event (GET /v2/tippmix/event/{id})."""
     try:
@@ -191,3 +239,24 @@ def get_tippmix_matches() -> list[dict]:
     other = [m for m in base_matches if not m["is_wc"]]
     print(f"  Got {len(wc)} WC matches + {len(other)} other football matches from Tippmix")
     return base_matches
+
+
+def get_tippmix_live_odds() -> list[dict]:
+    """Returns currently live Tippmix WC events with full market data (direct API, no browser)."""
+    print("  Fetching Tippmix.hu LIVE odds via API...")
+    data = _fetch_events_list()
+    matches = _parse_live_events(data) if data else []
+
+    wc_live = [m for m in matches if m.get("is_wc") and m.get("event_id")]
+    if wc_live:
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            groups = list(ex.map(lambda m: _fetch_event_markets(m["event_id"]), wc_live))
+        for m, mgs in zip(wc_live, groups):
+            m["market_groups"] = mgs if isinstance(mgs, list) else []
+
+    for m in matches:
+        m.setdefault("market_groups", [])
+
+    wc = [m for m in matches if m["is_wc"]]
+    print(f"  Got {len(wc)} live WC matches from Tippmix ({len(matches)} total live)")
+    return matches

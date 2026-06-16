@@ -258,6 +258,11 @@
     .edge-neg { color: #ff6b6b; }
 
     .loading { text-align: center; color: #6b7aff; padding: 20px; font-size: 0.9rem; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .live-refresh-btn { background:#1a2240;border:1px solid #2e3a5a;color:#a0b0ff;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:0.82rem;transition:opacity .2s; }
+    .live-refresh-btn .icon { display:inline-block;transition:transform .3s; }
+    .live-refresh-btn.spinning .icon { animation: spin 0.7s linear infinite; }
     .error { color: #ff6b6b; background: #1e0a0a; border: 1px solid #3a1010; border-radius: 8px; padding: 12px 16px; margin-top: 16px; }
     .empty-state { text-align: center; color: #555; padding: 60px 20px; font-size: 0.95rem; }
 
@@ -282,7 +287,7 @@
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('tippmix')">Tippmix.hu</div>
-  <div class="tab" onclick="switchTab('demo')">Összes csapat</div>
+  <div class="tab" onclick="switchTab('live')">🔴 Élő meccsek</div>
 </div>
 
 <div class="container">
@@ -338,6 +343,97 @@
             <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>~becslés fogadások 20% edge alatt</span></div>
           </div>
         </div>
+
+        <!-- Rules table -->
+        <div style="margin-top:20px;overflow-x:auto">
+          <div style="font-size:0.7rem;color:#6b7aff;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Fogadási szabálytáblázat</div>
+          <table style="width:100%;font-size:0.8rem;border-collapse:collapse;border:2px solid #2e3a5a">
+            <thead>
+              <tr style="background:#1a2240">
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700;white-space:nowrap">Piac típusa</th>
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700;white-space:nowrap">Edge %</th>
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700;white-space:nowrap">Döntés</th>
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700;white-space:nowrap">Tét</th>
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700;white-space:nowrap">Prioritás</th>
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700">Megjegyzés</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background:#071a07">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">Gólpiac (O/U, DNB)</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#4cff91;font-weight:700">≥ 15%</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#0a3a0a;color:#4cff91;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">FOGADJ</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#e8e8e8">¼ Kelly</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#4cff91">⭐ Legjobb</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">Legerősebb szignál, elsőbbség</td>
+              </tr>
+              <tr style="background:#101a10">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">Gólpiac (O/U, DNB)</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#a0cc60;font-weight:700">7% – 14%</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#1a2e0a;color:#a0cc60;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">FOGADJ</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#e8e8e8">¼ Kelly</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#a0cc60">Jó</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">Érdemes, de ne halmozz egy meccsen</td>
+              </tr>
+              <tr style="background:#131316">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">Gólpiac (O/U, DNB)</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#555;font-weight:700">&lt; 7%</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#2a0a0a;color:#ff6b6b;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">HAGYD KI</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#444">—</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#444">—</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#555">Modell bizonytalansága nagyobb az edge-nél</td>
+              </tr>
+              <tr style="background:#1a1408">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">1X2 (győztes)</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#f0a020;font-weight:700">≥ 20%</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#2a1a00;color:#f0a020;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">FOGADJ</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#e8e8e8">¼ Kelly</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#f0a020">Közepes</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">Ha nincs jobb gólpiac bet</td>
+              </tr>
+              <tr style="background:#131316">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">1X2 (győztes)</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#555;font-weight:700">&lt; 20%</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#2a0a0a;color:#ff6b6b;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">HAGYD KI</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#444">—</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#444">—</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#555">1X2 természetesen magas variancia</td>
+              </tr>
+              <tr style="background:#191208">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">Szöglet / les (~becslés)</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#f0a020;font-weight:700">≥ 20%</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#2a1a00;color:#f0a020;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">FOGADJ*</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#e8e8e8">⅛ Kelly</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#f0a020">Alacsony</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">*Fél összeggel, közelítő modell</td>
+              </tr>
+              <tr style="background:#131316">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">Szöglet / les (~becslés)</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#555;font-weight:700">&lt; 20%</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#2a0a0a;color:#ff6b6b;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">HAGYD KI</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#444">—</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#444">—</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#555">Nem elég megbízható</td>
+              </tr>
+              <tr style="background:#1a0a0a">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">Korreláló fogadások</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#ff6b6b;font-weight:700">bármilyen</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#2a0a0a;color:#ff6b6b;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">CSAK EGYET</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#444">—</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#ff6b6b">❌ Tiltott</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">DNB + 1X2 + Hendikep = ugyanaz a kockázat</td>
+              </tr>
+              <tr style="background:#1a0a0a">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">Pontos eredmény / kombó</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#ff6b6b;font-weight:700">bármilyen</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#2a0a0a;color:#ff6b6b;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">HAGYD KI</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#444">—</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#ff6b6b">❌ Tiltott</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">Túl kockázatos, nagy variancia</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -346,6 +442,128 @@
         Kattints a "Tippmix frissítése" gombra az élő oddsok betöltéséhez<br>
         <span style="font-size:0.8rem;margin-top:8px;display:block">~10 mp (headless böngésző indul)</span>
       </div>
+    </div>
+  </div>
+
+  <!-- TAB: Live matches -->
+  <div class="tab-content" id="tab-live">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div class="card-title">🔴 Élő VB meccsek</div>
+        <div style="font-size:0.78rem;color:#555;margin-top:4px">Valós idejű xG + Poisson modell • Auto-frissítés 15mp-enként</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="live-countdown" style="font-size:0.75rem;color:#444;display:none">⟳ <span id="live-countdown-s">15</span>s</span>
+        <button onclick="loadLive(false)" class="live-refresh-btn"><span class="icon">⟳</span> Frissítés</button>
+      </div>
+    </div>
+    <!-- Live betting guide -->
+    <div class="guide-panel" style="margin-bottom:20px">
+      <button class="guide-toggle" onclick="toggleLiveGuide()">📖 Élő fogadás szabályok — útmutató (kattints a megnyitáshoz)</button>
+      <div class="guide-body" id="live-guide-body">
+        <!-- Fair odds explanation -->
+        <div style="background:#0d1525;border:1px solid #2e3a5a;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:0.82rem;line-height:1.7">
+          <span style="color:#6b7aff;font-weight:700">Mi az a fair odds?</span>
+          <span style="color:#aaa"> — A modell kiszámítja, mennyi az esemény valódi valószínűsége. A fair odds = </span>
+          <span style="color:#fff;font-weight:700">1 ÷ valószínűség</span>
+          <span style="color:#aaa">. Ha a modell szerint 65% esély van a hazai győzelemre, a fair odds = 1 ÷ 0,65 = </span>
+          <span style="color:#4cff91;font-weight:700">1,54</span>
+          <span style="color:#aaa">. Ez a "valódi ár" — a Tippmixnek ezt vagy ennél <b style="color:#fff">többet</b> kell kínálnia, hogy értékes legyen a fogadás.</span>
+        </div>
+
+        <div class="guide-grid">
+          <div class="guide-box">
+            <h4>✅ Mikor fogadjak élőben?</h4>
+            <div class="guide-row"><span class="g-mark" style="color:#4cff91">●</span><span>Tippmix odds ≥ <b>fair odds × 1,10</b> (DNB / Gólszám) → fogadj</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#f0a020">●</span><span>Tippmix odds ≥ <b>fair odds × 1,15</b> (1X2) → fogadj, de kis téttel</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">●</span><span>Tippmix odds &lt; fair odds × 1,10 → ne fogadj, nincs elég margin</span></div>
+            <div class="guide-note" style="margin-top:8px">Pl. fair odds 1,54 → DNB/Gólszámnál min. <b>1,69</b> kell Tippmixen (1,54 × 1,10). Az élő táblázatban a <b>MIN. ODDS</b> oszlop ezt mutatja meg.</div>
+          </div>
+          <div class="guide-box">
+            <h4>💰 Mennyit fogadjak élőben?</h4>
+            <div class="guide-row"><span class="g-mark">🟢</span><span>DNB / Gólszám: javasolt tét = Kelly × ¼</span></div>
+            <div class="guide-row"><span class="g-mark">🟡</span><span>1X2 élőben: Kelly × ⅛ (nagyobb bizonytalanság)</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>Soha ne fogadj a teljes Kelly összegért</span></div>
+            <div class="guide-note" style="margin-top:8px">Írd be a Tippmix szorzót a KELLY TÉT kalkulátorba — megmutatja a javasolt összeget.</div>
+          </div>
+          <div class="guide-box">
+            <h4>⭐ Melyiket válasszam élőben?</h4>
+            <div class="guide-row"><span class="g-mark">1.</span><span>DNB — döntetlen esetén visszakapod a tétet, legbiztonságosabb</span></div>
+            <div class="guide-row"><span class="g-mark">2.</span><span>Gólszám O/U — független a győztestől, stabil piac</span></div>
+            <div class="guide-row"><span class="g-mark">3.</span><span>1X2 — csak ha modell% nagyon magas (&gt;80%) és fair × 1,15+ van</span></div>
+            <div class="guide-note">A modell élő xG-t is figyelembe vesz — bízz az adatban, ne az érzéseidben.</div>
+          </div>
+          <div class="guide-box">
+            <h4>❌ Mit hagyjak ki élőben?</h4>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>Ha Tippmix odds &lt; MIN. ODDS a táblázatban → nem value bet</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>Gól után azonnal: az odds már beárazta, késő</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>85+ perc: nincs elég idő a valószínűség kiegyenlítésére</span></div>
+            <div class="guide-row"><span class="g-mark" style="color:#ff6b6b">✗</span><span>Több korreláló fogadás ugyanazon a meccsen (pl. DNB + 1X2)</span></div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;overflow-x:auto">
+          <div style="font-size:0.7rem;color:#6b7aff;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Élő fogadási szabálytáblázat</div>
+          <table style="width:100%;font-size:0.8rem;border-collapse:collapse;border:2px solid #2e3a5a">
+            <thead>
+              <tr style="background:#1a2240">
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700;white-space:nowrap">Piac típusa</th>
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700;white-space:nowrap">Min. Tippmix szorzó</th>
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700;white-space:nowrap">Döntés</th>
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700;white-space:nowrap">Tét</th>
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700;white-space:nowrap">Prioritás</th>
+                <th style="padding:9px 12px;border:1px solid #2e3a5a;color:#a0b0ff;font-weight:700">Megjegyzés</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background:#071a07">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">DNB (Döntetlennél visszajár)</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#4cff91;font-weight:700">fair odds × 1,10</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#0a3a0a;color:#4cff91;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">FOGADJ</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#e8e8e8">¼ Kelly</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#4cff91">⭐ Legjobb</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">Döntetlen esetén visszakapod a tétet</td>
+              </tr>
+              <tr style="background:#101a10">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">Gólszám O/U</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#a0cc60;font-weight:700">fair odds × 1,10</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#1a2e0a;color:#a0cc60;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">FOGADJ</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#e8e8e8">¼ Kelly</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#a0cc60">🥈 Jó</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">Független a győztestől, stabil</td>
+              </tr>
+              <tr style="background:#161208">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">1X2 élőben</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#f0a020;font-weight:700">fair odds × 1,15</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#2a1e08;color:#f0a020;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">ÓVATOSAN</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#e8e8e8">⅛ Kelly</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#f0a020">🥉 Kockázatos</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">Odds gyorsan mozog élőben, nagyobb margin kell</td>
+              </tr>
+              <tr style="background:#1a0a0a">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">Korreláló fogadások</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#ff6b6b;font-weight:700">bármilyen</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#2a0a0a;color:#ff6b6b;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">CSAK EGYET</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#444">—</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#ff6b6b">❌ Tiltott</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">DNB + 1X2 = ugyanaz a kockázat, ne rakd mindkettőt</td>
+              </tr>
+              <tr style="background:#1a0a0a">
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;font-weight:600">85+ perc / Tippmix &lt; MIN.</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#ff6b6b;font-weight:700">bármilyen</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a"><span style="background:#2a0a0a;color:#ff6b6b;padding:2px 10px;border-radius:4px;font-weight:700;font-size:0.75rem">HAGYD KI</span></td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#444">—</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#ff6b6b">❌ Tiltott</td>
+                <td style="padding:8px 12px;border:1px solid #2e3a5a;color:#888">Nincs elég edge vagy idő a kiegyenlítésre</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="live-list">
+      <div class="empty-state">Kattints a 🔴 Élő meccsek fülre az élő meccsek betöltéséhez</div>
     </div>
   </div>
 
@@ -360,10 +578,263 @@
 <script>
 // ── Tab switching ─────────────────────────────────────────────────────────
 function switchTab(name) {
-  const names = ['tippmix', 'demo'];
+  const names = ['tippmix', 'live', 'demo'];
   document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', names[i] === name));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'live') loadLive();
+}
+
+// ── Live matches ──────────────────────────────────────────────────────────────
+let _liveTimer = null;
+let _liveCountdownTimer = null;
+let _liveLoaded = false;
+
+function _startCountdown(seconds) {
+  clearInterval(_liveCountdownTimer);
+  const el  = document.getElementById('live-countdown');
+  const num = document.getElementById('live-countdown-s');
+  if (!el || !num) return;
+  let s = seconds;
+  num.textContent = s;
+  el.style.display = 'inline';
+  _liveCountdownTimer = setInterval(() => {
+    s--;
+    if (s <= 0) { clearInterval(_liveCountdownTimer); el.style.display = 'none'; }
+    else num.textContent = s;
+  }, 1000);
+}
+
+async function loadLive(silent = false) {
+  const list = document.getElementById('live-list');
+  const btn  = document.querySelector('#tab-live .live-refresh-btn');
+
+  // Save inputs BEFORE any DOM changes (manual refresh clears DOM first otherwise)
+  const savedInputs = {};
+  list.querySelectorAll('input[type="number"]').forEach((inp, i) => {
+    if (inp.value !== inp.defaultValue) savedInputs[i] = inp.value;
+  });
+
+  clearInterval(_liveCountdownTimer);
+  const countdownEl = document.getElementById('live-countdown');
+  if (countdownEl) countdownEl.style.display = 'none';
+
+  // First load only: show loading text
+  if (!silent || !_liveLoaded) {
+    list.innerHTML = '<div style="color:#555;padding:24px 0">Betöltés...</div>';
+  }
+  if (btn) btn.classList.add('spinning');
+
+  try {
+    const r = await fetch('/live-wc-matches');
+    const data = await r.json();
+    if (data.error) {
+      if (!silent) list.innerHTML = `<div style="color:#ff6b6b;padding:16px">Hiba: ${data.error}</div>`;
+      return;
+    }
+    renderLive(data.matches || data, data.tippmix_cache_age);
+    _liveLoaded = true;
+
+    // Restore user-typed input values
+    list.querySelectorAll('input[type="number"]').forEach((inp, i) => {
+      if (savedInputs[i] !== undefined) {
+        inp.value = savedInputs[i];
+        inp.dispatchEvent(new Event('input'));
+      }
+    });
+  } catch(e) {
+    if (!silent) list.innerHTML = `<div style="color:#ff6b6b;padding:16px">Kapcsolódási hiba: ${e.message}</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+    clearTimeout(_liveTimer);
+    _liveTimer = setTimeout(() => loadLive(true), 15000);
+    _startCountdown(15);
+  }
+}
+
+function renderLive(matches, cacheAge) {
+  const list = document.getElementById('live-list');
+  if (!matches.length) {
+    list.innerHTML = '<div style="color:#555;padding:24px 0">Nincs élő VB meccs jelenleg.</div>';
+    return;
+  }
+  const cacheInfo = cacheAge != null
+    ? `&nbsp;|&nbsp; <span style="color:#555">Tippmix odds: ${cacheAge < 10 ? 'friss' : cacheAge + 'mp régi'}</span>`
+    : `&nbsp;|&nbsp; <span style="color:#444">Tippmix odds betöltés alatt...</span>`;
+  list.innerHTML = `<div style="font-size:0.8rem;color:#555;margin-bottom:16px">${matches.length} élő VB meccs &nbsp;|&nbsp; <span style="color:#ff4444">● LIVE</span>${cacheInfo}</div>`;
+  matches.forEach(m => list.appendChild(buildLiveRow(m)));
+}
+
+function buildLiveRow(m) {
+  const lp = m.live_probs || {};
+  const bets = m.live_bets || [];
+  const hasTippmix = m.has_tippmix_odds;
+  const minute = m.minute + (m.extra_time ? `+${m.extra_time}` : '');
+  const xgAvail = m.xg_home > 0 || m.xg_away > 0;
+
+  const bankroll = getBankroll();
+  // Recalculate stakes if user changed bankroll (bets already have server-side stake)
+  // We recompute from kelly_pct and kelly_frac if available
+  function getStake(b) {
+    if (b.kelly_frac !== undefined && b.kelly_pct !== undefined) {
+      return Math.round((b.kelly_pct / 100) * b.kelly_frac * bankroll);
+    }
+    return b.stake_ft || 0;
+  }
+
+  const redH = m.red_cards_home > 0 ? ` <span style="color:#ff4444">${'🟥'.repeat(m.red_cards_home)}</span>` : '';
+  const redA = m.red_cards_away > 0 ? ` <span style="color:#ff4444">${'🟥'.repeat(m.red_cards_away)}</span>` : '';
+
+  // --- Value bet cards (with actual Tippmix odds) ---
+  let betSection = '';
+  if (hasTippmix) {
+    const valueBets = bets.filter(b => b.value);
+    const allBets   = bets.filter(b => !b.value).slice(0, 6);
+
+    const makeRow = (b, isValue) => {
+      const stake = getStake(b);
+      const edgeColor = b.edge_pct >= 10 ? '#4cff91' : b.edge_pct >= 5 ? '#f0a020' : '#888';
+      const badge = isValue
+        ? `<span style="background:#1a3a1a;color:#4cff91;border:1px solid #2e5a2e;padding:1px 6px;border-radius:3px;font-size:0.7rem">FOGADJ</span>`
+        : `<span style="background:#1a1a2a;color:#555;border:1px solid #2a2a3a;padding:1px 6px;border-radius:3px;font-size:0.7rem">—</span>`;
+      return `<tr style="${isValue ? 'background:#0d1a0d' : ''}">
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#ccc">${b.market}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#ccc;font-size:0.75rem">${b.outcome}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#a0b0ff;font-weight:700;text-align:center">${b.model_prob}%</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#e8e8e8;font-weight:700;text-align:center">${b.tippmix_odds}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:${edgeColor};font-weight:700;text-align:center">${b.edge_pct > 0 ? '+' : ''}${b.edge_pct}%</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#4cff91;font-weight:700;text-align:center">${isValue && stake > 0 ? stake.toLocaleString('hu-HU') + ' Ft' : '—'}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;text-align:center">${badge}</td>
+      </tr>`;
+    };
+
+    const valueRows = valueBets.map(b => makeRow(b, true)).join('');
+    const otherRows = allBets.map(b => makeRow(b, false)).join('');
+
+    betSection = `
+    <div style="font-size:0.72rem;color:#6b7aff;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+      Élő value fogadások — Tippmix Pro odds
+      ${valueBets.length ? `<span style="color:#4cff91;margin-left:8px">${valueBets.length} value bet!</span>` : ''}
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;font-size:0.78rem;border-collapse:collapse;border:1px solid #1e2a3a">
+        <thead>
+          <tr style="background:#0d1020">
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#6b7aff;text-align:left">Piac</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#6b7aff;text-align:left">Kimenet</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#a0b0ff">Modell %</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#e8e8e8">Tippmix odds</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#f0a020">Edge %</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#4cff91">Kelly tét (Ft)</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#6b7aff">Döntés</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${valueRows}
+          ${otherRows}
+        </tbody>
+      </table>
+    </div>`;
+  } else {
+    // Fallback: no Tippmix live odds — show min odds + live Kelly calculator
+    const topBets = bets.filter(b => b.prob >= 50).slice(0, 8);
+    const uid = Math.random().toString(36).slice(2, 7); // unique id per match card
+
+    const betRows = topBets.map((b, i) => {
+      const rowId = `lkr_${uid}_${i}`;
+      const kfrac = b.kelly_frac || 0.125;
+      return `<tr id="${rowId}" data-prob="${b.prob/100}" data-kfrac="${kfrac}">
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#ccc">${b.market}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#a0b0ff;font-weight:700;text-align:center">${b.prob}%</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#888;text-align:center">${b.fair_odds}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#f0a020;font-weight:700;text-align:center">≥ ${b.min_odds}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;text-align:center">
+          <input type="number" value="${b.min_odds}" min="1.01" step="0.05"
+            style="width:65px;background:#0d1020;border:1px solid #2e3a5a;color:#e8e8e8;padding:3px 5px;border-radius:4px;font-size:0.78rem;text-align:center"
+            placeholder="odds"
+            oninput="liveKellyCalc('${rowId}', this.value)">
+        </td>
+        <td class="live-kelly-out" style="padding:6px 10px;border:1px solid #1e2a3a;color:#555;font-weight:700;text-align:center;min-width:80px">—</td>
+        <td class="live-win-out"  style="padding:6px 10px;border:1px solid #1e2a3a;color:#555;font-weight:700;text-align:center;min-width:80px">—</td>
+        <td class="live-prof-out" style="padding:6px 10px;border:1px solid #1e2a3a;color:#555;font-weight:700;text-align:center;min-width:80px">—</td>
+      </tr>`;
+    }).join('');
+
+    betSection = `
+    <div style="font-size:0.72rem;color:#6b7aff;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+      Fogadási kalkulátor — írd be a Tippmix Pro odds-ot
+    </div>
+    ${topBets.length ? `
+    <div style="overflow-x:auto">
+      <table style="width:100%;font-size:0.78rem;border-collapse:collapse;border:1px solid #1e2a3a">
+        <thead>
+          <tr style="background:#0d1020">
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#6b7aff;text-align:left">Fogadás</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#a0b0ff">Modell %</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#888">Fair odds</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#f0a020">Min. odds</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#e8e8e8">Tippmix odds <span style="color:#555;font-size:0.7rem">(írd be)</span></th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#4cff91">Kelly tét (Ft)</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#a0b0ff">Nyeremény (Ft)</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#4cff91">Profit (Ft)</th>
+          </tr>
+        </thead>
+        <tbody>${betRows}</tbody>
+      </table>
+    </div>
+    <div style="font-size:0.7rem;color:#333;margin-top:6px">Bankroll: <b style="color:#555">${getBankroll().toLocaleString('hu-HU')} Ft</b> · Írd be az odds-ot amit Tippmix Pro mutat → megmutatja mennyit tegyél fel</div>`
+    : '<div style="color:#444;font-size:0.8rem">Nincs elég valószínűségű fogadás.</div>'}`;
+  }
+
+  const div = document.createElement('div');
+  div.className = `match-row ${bets.some(b => b.value) ? 'has-value' : ''}`;
+  div.style.marginBottom = '16px';
+  div.innerHTML = `
+    <div class="match-top">
+      <div>
+        <div class="match-teams">
+          ${m.home_team_raw}${redH} <span style="color:#ff4444;font-size:1.1rem">${m.home_score} — ${m.away_score}</span> ${m.away_team_raw}${redA}
+        </div>
+        <div style="font-size:0.75rem;color:#555;margin-top:4px">
+          <span style="color:#ff4444;font-weight:700">● ${minute}'</span>
+          &nbsp;·&nbsp; ~xG: <b style="color:#e8e8e8">${m.xg_home}</b> – <b style="color:#e8e8e8">${m.xg_away}</b>
+          &nbsp;·&nbsp; Labdabirtoklás: ${m.possession_home}% – ${m.possession_away}%
+          &nbsp;·&nbsp; Kapura: ${m.shots_on_target_home} – ${m.shots_on_target_away}
+          ${!xgAvail ? '&nbsp;·&nbsp;<span style="color:#444">(xG még nem elérhető)</span>' : ''}
+          ${hasTippmix ? '&nbsp;·&nbsp;<span style="color:#4cff91;font-size:0.7rem">✓ Tippmix odds</span>' : '<span style="color:#555;font-size:0.7rem">&nbsp;·&nbsp;Tippmix odds hiányzik</span>'}
+        </div>
+      </div>
+      <div style="text-align:right;font-size:0.75rem;color:#555">
+        <div>Előmeccs xG: ${m.pre_xg_home} – ${m.pre_xg_away}</div>
+        <div style="margin-top:2px">Élő modell súlya: ${Math.round((lp.live_weight||0)*100)}%</div>
+        <div style="margin-top:2px;color:#333">O2.5: ${((lp.over_2_5||0)*100).toFixed(0)}% &nbsp;·&nbsp; BTTS: ${((lp.btts||0)*100).toFixed(0)}%</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0;font-size:0.8rem">
+      <div style="background:#0d1a0d;border:1px solid #1e3a1e;border-radius:6px;padding:10px;text-align:center">
+        <div style="color:#555;font-size:0.7rem;margin-bottom:4px">HAZAI GYŐZELEM</div>
+        <div style="color:#4cff91;font-size:1.1rem;font-weight:700">${((lp.home_win||0)*100).toFixed(1)}%</div>
+        <div style="color:#444;font-size:0.7rem">fair: ${lp.home_win > 0 ? (1/lp.home_win).toFixed(2) : '—'}</div>
+      </div>
+      <div style="background:#0d0d1a;border:1px solid #1e1e3a;border-radius:6px;padding:10px;text-align:center">
+        <div style="color:#555;font-size:0.7rem;margin-bottom:4px">DÖNTETLEN</div>
+        <div style="color:#a0a8ff;font-size:1.1rem;font-weight:700">${((lp.draw||0)*100).toFixed(1)}%</div>
+        <div style="color:#444;font-size:0.7rem">fair: ${lp.draw > 0 ? (1/lp.draw).toFixed(2) : '—'}</div>
+      </div>
+      <div style="background:#1a0d0d;border:1px solid #3a1e1e;border-radius:6px;padding:10px;text-align:center">
+        <div style="color:#555;font-size:0.7rem;margin-bottom:4px">VENDÉG GYŐZELEM</div>
+        <div style="color:#ff8888;font-size:1.1rem;font-weight:700">${((lp.away_win||0)*100).toFixed(1)}%</div>
+        <div style="color:#444;font-size:0.7rem">fair: ${lp.away_win > 0 ? (1/lp.away_win).toFixed(2) : '—'}</div>
+      </div>
+    </div>
+
+    ${betSection}
+
+    <div style="margin-top:8px;font-size:0.7rem;color:#333">
+      Várható maradék gól: <b style="color:#555">${lp.exp_remaining_home}</b> – <b style="color:#555">${lp.exp_remaining_away}</b>
+    </div>`;
+  return div;
 }
 
 // ── Tippmix.hu ────────────────────────────────────────────────────────────
@@ -373,9 +844,43 @@ function getBankroll() {
   return parseFloat(document.getElementById('bankroll').value) || 10000;
 }
 
-function rebuildStakes() {
-  if (_tippmixData.length) renderTippmixList(_tippmixData);
+function liveKellyCalc(rowId, oddsVal) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  const stakeOut = row.querySelector('.live-kelly-out');
+  const winOut   = row.querySelector('.live-win-out');
+  const profOut  = row.querySelector('.live-prof-out');
+  const odds = parseFloat(oddsVal);
+  const prob = parseFloat(row.dataset.prob);
+  const kfrac = parseFloat(row.dataset.kfrac);
+  const bankroll = getBankroll();
+  const clear = () => {
+    stakeOut.textContent = '—'; stakeOut.style.color = '#555';
+    winOut.textContent   = '—'; winOut.style.color   = '#555';
+    profOut.textContent  = '—'; profOut.style.color  = '#555';
+  };
+  if (!odds || odds <= 1.0 || !prob) { clear(); return; }
+  const kelly = Math.max(0, (prob * odds - 1) / (odds - 1));
+  const stake = Math.round(kelly * kfrac * bankroll);
+  if (stake <= 0) { clear(); return; }
+  const win    = Math.round(stake * odds);
+  const profit = win - stake;
+  stakeOut.textContent = stake.toLocaleString('hu-HU') + ' Ft';  stakeOut.style.color = '#4cff91';
+  winOut.textContent   = win.toLocaleString('hu-HU') + ' Ft';    winOut.style.color   = '#a0b0ff';
+  profOut.textContent  = '+' + profit.toLocaleString('hu-HU') + ' Ft'; profOut.style.color = '#4cff91';
 }
+
+function rebuildStakes() {
+  if (_tippmixData.length) {
+    renderTippmixList(_tippmixData);
+  }
+}
+
+const MKTPRIO = n =>
+  n.includes('Döntetlennél') ? 3 :
+  n.includes('Gólszám') || n.includes('Mindkét') || n.includes('DNB') ? 2 :
+  n === '1X2' || n === 'Hazai győzelem' || n === 'Vendég győzelem' ? 1 : 0;
+
 
 async function loadTippmix() {
   const list = document.getElementById('tippmix-list');
@@ -392,32 +897,144 @@ async function loadTippmix() {
   }
 }
 
+function matchBestEdge(m) {
+  // Best trusted (non-approximate) value bet edge for ranking matches
+  const trusted = (m.value_bets || []).filter(v =>
+    v.value &&
+    !['Szögletek', 'Statisztika'].includes(v.market_group)
+  );
+  return trusted.length > 0 ? Math.max(...trusted.map(v => v.edge_pct)) : -Infinity;
+}
+
 function renderTippmixList(data) {
   const list = document.getElementById('tippmix-list');
-  const wc    = data.filter(m => m.is_wc);
-  const other = data.filter(m => !m.is_wc);
-  const valCount = data.reduce((s, m) => s + ((m.value_bets || []).filter(v => v.value).length), 0);
+  const bankroll = getBankroll();
+  const wc = data
+    .filter(m => m.is_wc)
+    .sort((a, b) => {
+      const ta = a.event_date ? new Date(a.event_date).getTime() : Infinity;
+      const tb = b.event_date ? new Date(b.event_date).getTime() : Infinity;
+      if (ta !== tb) return ta - tb;
+      return matchBestEdge(b) - matchBestEdge(a);
+    });
+  const valCount = wc.reduce((s, m) => s + ((m.value_bets || []).filter(v => v.value).length), 0);
 
-  list.innerHTML = `<div style="font-size:0.8rem;color:#555;margin-bottom:16px">
-    ${data.length} meccs betöltve &nbsp;|&nbsp; ${wc.length} Világbajnokság &nbsp;|&nbsp;
-    <span style="color:#4cff91">${valCount} value bet összesen</span>
-  </div>`;
+  // ── Recommended bets section ──────────────────────────────────────────────
+  function betStake(v) {
+    const isApprox = ['Szögletek', 'Statisztika'].includes(v.market_group);
+    const full = Math.max(100, Math.round(bankroll * v.kelly_pct / 100 / 100) * 100);
+    return { stake: Math.max(100, Math.round(full / (isApprox ? 8 : 4) / 100) * 100), isApprox };
+  }
+
+  // Same priority logic as the match cards: non-approx first, then DNB > Gólszám > 1X2, then edge
+  const MKTP = n => n.includes('Döntetlennél') ? 3 : n.includes('Gólszám') || n.includes('Mindkét') ? 2 : n === '1X2' ? 1 : 0;
+
+  function cardSortKey(r) {
+    const tier = r.isApprox ? 1 : 0;
+    return [tier, -MKTP(r.v.market), -r.v.edge_pct];
+  }
+  function cmpKey(a, b) {
+    const ka = cardSortKey(a), kb = cardSortKey(b);
+    for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] - kb[i];
+    return 0;
+  }
+
+  const nowMs = Date.now();
+  // One entry per match: primary = best bet (same logic as match card), secondary unused
+  const bestPerMatch = [];
+  for (const m of wc) {
+    const label = `${m.home_team_hu} – ${m.away_team_hu}`;
+    const _d = m.event_date ? new Date(m.event_date) : null;
+    const time  = _d ? _d.toLocaleString('hu-HU', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+    const kickoffMs = m.event_date ? new Date(m.event_date).getTime() : null;
+    const minsFromNow = kickoffMs ? (kickoffMs - nowMs) / 60000 : null;
+    const matchStatus = kickoffMs === null ? 'unknown'
+      : minsFromNow > 60   ? 'upcoming'
+      : minsFromNow > 0    ? 'soon'
+      : minsFromNow > -110 ? 'live'
+      : 'finished';
+    const allBets = (m.value_bets || []).filter(v => v.value).map(v => {
+      const { stake, isApprox } = betStake(v);
+      return { label, time, v, stake, isApprox, matchStatus };
+    });
+    if (!allBets.length) continue;
+    // Mirror EXACT logic of match card: trusted = non-approx, edge >= 7, sort by MKTP then edge
+    const trustedBets = allBets.filter(b => !b.isApprox && b.v.edge_pct >= 7)
+      .sort((a, b) => {
+        const pd = MKTP(b.v.market) - MKTP(a.v.market);
+        return pd !== 0 ? pd : b.v.edge_pct - a.v.edge_pct;
+      });
+    // Fallback: best non-approx value bet if none cross 7%
+    const fallbackBets = allBets.filter(b => !b.isApprox)
+      .sort((a, b) => b.v.edge_pct - a.v.edge_pct);
+    const primary = (trustedBets[0] || fallbackBets[0] || allBets[0]);
+    // Secondary = highest edge with different market+outcome
+    const secondary = allBets.find(b => b.v.market !== primary.v.market || b.v.outcome !== primary.v.outcome) || null;
+    bestPerMatch.push({ primary, secondary, matchStatus, kickoffMs: kickoffMs || Infinity });
+  }
+  // Sort: kick-off time ascending, then primary edge descending
+  bestPerMatch.sort((a, b) => {
+    if (a.kickoffMs !== b.kickoffMs) return a.kickoffMs - b.kickoffMs;
+    return b.primary.v.edge_pct - a.primary.v.edge_pct;
+  });
+  const top10PerMatch = bestPerMatch.slice(0, 10);
+
+  function betChip(b) {
+    const col = b.isApprox ? '#6b7aff' : b.v.edge_pct >= 10 ? '#4cff91' : '#f0a020';
+    const flag = b.isApprox
+      ? ' <span style="font-size:0.57rem;color:#6b7aff;border:1px solid #6b7aff44;padding:0 3px;border-radius:2px">~</span>'
+      : '';
+    return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:0.82rem;color:#e8e8e8;font-weight:700;flex:1;min-width:100px">${b.v.market}${flag} — <span style="color:${col}">${b.v.outcome}</span></span>
+      <span style="font-size:0.72rem;color:#444">odds <b style="color:#ccc">${b.v.best_odds}</b></span>
+      <span style="font-size:0.72rem;color:#444">+<b style="color:${col}">${b.v.edge_pct}%</b></span>
+      <span style="font-size:0.9rem;font-weight:800;color:${col};white-space:nowrap">${b.stake.toLocaleString('hu-HU')} Ft</span>
+    </div>`;
+  }
+
+  function recRow(entry, i) {
+    const { primary: r, secondary: s, matchStatus } = entry;
+    const isLive = matchStatus === 'live';
+    const isSoon = matchStatus === 'soon';
+    const wrapStyle = isLive
+      ? 'background:#1a0808;border:1px solid #ff4444;border-radius:5px;padding:8px 12px;box-shadow:0 0 10px #ff444455'
+      : isSoon
+      ? 'background:#1a1208;border:1px solid #f0a020;border-radius:5px;padding:8px 12px;box-shadow:0 0 10px #f0a02044'
+      : 'background:#0a0f1a;border:1px solid #1a2235;border-radius:5px;padding:8px 12px';
+    const statusBadge = isLive
+      ? '<span style="font-size:0.6rem;font-weight:800;color:#ff4444;background:#ff444433;padding:1px 6px;border-radius:3px;letter-spacing:.05em">● ÉLŐ</span>'
+      : isSoon
+      ? '<span style="font-size:0.6rem;font-weight:700;color:#f0a020;background:#f0a02033;padding:1px 6px;border-radius:3px">⏱ &lt;1h</span>'
+      : '';
+    return `<div style="${wrapStyle}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+        <span style="font-size:0.68rem;color:#444">${i+1}.</span>
+        <span style="font-size:0.72rem;font-weight:700;color:#6b7aff">${r.time}</span>
+        ${statusBadge}
+        <span style="font-size:0.75rem;color:#aaa;font-weight:600">${r.label}</span>
+      </div>
+      ${betChip(r)}
+    </div>`;
+  }
+
+  const slipHTML = top10PerMatch.length ? `
+    <div style="margin-bottom:28px;background:#080c14;border:1px solid #1a2235;border-radius:6px;overflow:hidden">
+      <div style="padding:10px 16px;border-bottom:1px solid #1a2235;font-size:0.82rem;font-weight:700;color:#e8e8e8">Ajánlott fogadások — egy meccs, egy tipp</div>
+      <div style="padding:10px;display:flex;flex-direction:column;gap:6px">
+        ${top10PerMatch.map((e, i) => recRow(e, i)).join('')}
+      </div>
+    </div>` : '';
+
+  list.innerHTML = `
+    <div style="font-size:0.8rem;color:#555;margin-bottom:16px">
+      ${wc.length} VB meccs &nbsp;|&nbsp; <span style="color:#4cff91">${valCount} value bet összesen</span>
+    </div>
+    ${slipHTML}`;
 
   if (wc.length) {
-    const h = document.createElement('div');
-    h.className = 'card-title';
-    h.style.marginBottom = '12px';
-    h.textContent = 'Világbajnokság 2026';
-    list.appendChild(h);
-    wc.forEach(m => list.appendChild(buildTippmixRow(m)));
-  }
-  if (other.length) {
-    const h = document.createElement('div');
-    h.className = 'card-title';
-    h.style.margin = '20px 0 12px';
-    h.textContent = 'Egyéb labdarúgás';
-    list.appendChild(h);
-    other.forEach(m => list.appendChild(buildTippmixRow(m)));
+    wc.forEach((m, i) => list.appendChild(buildTippmixRow(m, i + 1)));
+  } else {
+    list.innerHTML += '<div style="color:#555;padding:24px 0">Nincs elérhető VB meccs Tippmix-en.</div>';
   }
 }
 
@@ -463,7 +1080,7 @@ function buildVbetCard(v, bankroll, isTopPick = false) {
     </div>`;
 }
 
-function buildTippmixRow(m) {
+function buildTippmixRow(m, rank) {
   const bankroll = getBankroll();
   const hw = (m.home_win * 100).toFixed(1);
   const dr = (m.draw    * 100).toFixed(1);
@@ -476,7 +1093,7 @@ function buildTippmixRow(m) {
   const allAnalyzed  = allVbets.filter(v => !v.value && v.model_prob > 0);
 
   // Identify the single best bet per match (non-approx, edge ≥ 7%, priority: DNB > Gólszám O/U > 1X2)
-  const MKTPRIO = n => n.includes('Döntetlennél') ? 3 : /^Gólszám \d/.test(n) ? 2 : n === '1X2' ? 1 : 0;
+  const MKTPRIO = n => n.includes('Döntetlennél') ? 3 : n.includes('Gólszám') ? 2 : n === '1X2' ? 1 : 0;
   const trusted = allVbets.filter(v =>
     v.value &&
     !['Szögletek', 'Statisztika'].includes(v.market_group) &&
@@ -560,16 +1177,21 @@ function buildTippmixRow(m) {
       </div>`;
   }
 
+  const bestEdge = matchBestEdge(m);
+  const rankColor = rank === 1 ? '#ffd700' : rank === 2 ? '#c0c0c0' : rank === 3 ? '#cd7f32' : '#444';
+  const rankLabel = rank ? `<span style="font-size:0.78rem;font-weight:700;color:${rankColor};margin-right:6px">#${rank}</span>` : '';
+
   const div = document.createElement('div');
   div.className = 'match-row' + (m.has_value ? ' has-value' : '');
   div.innerHTML = `
     <div class="match-top">
       <div>
-        <div class="match-teams">${m.home_team_hu} vs ${m.away_team_hu}</div>
+        <div class="match-teams">${rankLabel}${m.home_team_hu} vs ${m.away_team_hu}</div>
         <div style="font-size:0.75rem;color:#555;margin-top:2px">
           ${m.competition} &nbsp;·&nbsp; ${dt}
           ${m.is_wc ? '&nbsp;·&nbsp;<span style="color:#6b7aff">VB 2026</span>' : ''}
           ${totalMarkets > 0 ? `&nbsp;·&nbsp;<span style="color:#444">${totalMarkets} piac</span>` : ''}
+          ${bestEdge > -Infinity ? `&nbsp;·&nbsp;<span style="color:#888">legjobb edge: <b style="color:#4cff91">+${bestEdge.toFixed(1)}%</b></span>` : ''}
         </div>
       </div>
       ${totalValue > 0
@@ -614,6 +1236,16 @@ function toggleGuide() {
   btn.textContent = open
     ? '📖 Mikor és mennyit fogadjak? — útmutató (kattints a bezáráshoz)'
     : '📖 Mikor és mennyit fogadjak? — útmutató (kattints a megnyitáshoz)';
+}
+
+function toggleLiveGuide() {
+  const body = document.getElementById('live-guide-body');
+  const btn  = document.querySelector('#tab-live .guide-toggle');
+  const open = !body.classList.contains('open');
+  body.classList.toggle('open', open);
+  btn.textContent = open
+    ? '📖 Élő fogadás szabályok — útmutató (kattints a bezáráshoz)'
+    : '📖 Élő fogadás szabályok — útmutató (kattints a megnyitáshoz)';
 }
 
 // ── All Teams / Demo ──────────────────────────────────────────────────────
