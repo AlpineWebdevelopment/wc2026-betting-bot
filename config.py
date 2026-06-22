@@ -26,7 +26,7 @@ WC_HOSTS = {"United States", "Canada", "Mexico"}
 
 # ── Telegram bot ─────────────────────────────────────────────
 TELEGRAM_TOKEN    = os.environ.get("TELEGRAM_TOKEN", "8763791576:AAHmhBwNpH2sG6PHkhb2VgXt7NbIxnEdeZ0")
-TELEGRAM_CHAT_ID  = os.environ.get("TELEGRAM_CHAT_ID", "5409923120")
+TELEGRAM_CHAT_ID  = os.environ.get("TELEGRAM_CHAT_ID", "-5395385066")
 TELEGRAM_INTERVAL_HOURS = 3        # how often to check (hours)
 TELEGRAM_MIN_EDGE = 7.0            # only alert if best edge >= this %
-TELEGRAM_BANKROLL = 10000          # your bankroll in HUF
+TELEGRAM_BANKROLL = 2300           # your bankroll in HUF
