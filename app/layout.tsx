@@ -3,6 +3,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "WC 2026 Betting Model",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: { index: false, follow: false },
+  },
 };
 
 export const viewport: Viewport = {
