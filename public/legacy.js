@@ -1,0 +1,1336 @@
+// ── Tab switching ─────────────────────────────────────────────────────────
+let _historyTimer = null;
+
+function switchTab(name) {
+  const names = ['tippmix', 'corners', 'cards', 'live', 'history'];
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.tab-content').forEach(c => {
+    c.classList.remove('active');
+    c.style.display = 'none';
+  });
+  const el = document.getElementById('tab-' + name);
+  if (el) { el.classList.add('active'); el.style.display = 'block'; }
+  if (name === 'live') loadLive();
+  // History: auto-load on switch, then refresh every 2 minutes
+  clearInterval(_historyTimer);
+  if (name === 'history') {
+    loadHistory();
+    _historyTimer = setInterval(loadHistory, 2 * 60 * 1000);
+  }
+}
+
+// ── Live matches ──────────────────────────────────────────────────────────────
+let _liveTimer = null;
+let _liveCountdownTimer = null;
+let _liveLoaded = false;
+
+function _startCountdown(seconds) {
+  clearInterval(_liveCountdownTimer);
+  const el  = document.getElementById('live-countdown');
+  const num = document.getElementById('live-countdown-s');
+  if (!el || !num) return;
+  let s = seconds;
+  num.textContent = s;
+  el.style.display = 'inline';
+  _liveCountdownTimer = setInterval(() => {
+    s--;
+    if (s <= 0) { clearInterval(_liveCountdownTimer); el.style.display = 'none'; }
+    else num.textContent = s;
+  }, 1000);
+}
+
+async function loadLive(silent = false) {
+  const list = document.getElementById('live-list');
+  const btn  = document.querySelector('#tab-live .live-refresh-btn');
+
+  // Save inputs BEFORE any DOM changes (manual refresh clears DOM first otherwise)
+  const savedInputs = {};
+  list.querySelectorAll('input[type="number"]').forEach((inp, i) => {
+    if (inp.value !== inp.defaultValue) savedInputs[i] = inp.value;
+  });
+
+  clearInterval(_liveCountdownTimer);
+  const countdownEl = document.getElementById('live-countdown');
+  if (countdownEl) countdownEl.style.display = 'none';
+
+  // First load only: show loading text
+  if (!silent || !_liveLoaded) {
+    list.innerHTML = '<div style="color:#555;padding:24px 0">Betöltés...</div>';
+  }
+  if (btn) btn.classList.add('spinning');
+
+  try {
+    const r = await fetch('/live-wc-matches');
+    const data = await r.json();
+    if (data.error) {
+      if (!silent) list.innerHTML = `<div style="color:#ff6b6b;padding:16px">Hiba: ${data.error}</div>`;
+      return;
+    }
+    renderLive(data.matches || data, data.tippmix_cache_age);
+    _liveLoaded = true;
+
+    // Restore user-typed input values
+    list.querySelectorAll('input[type="number"]').forEach((inp, i) => {
+      if (savedInputs[i] !== undefined) {
+        inp.value = savedInputs[i];
+        inp.dispatchEvent(new Event('input'));
+      }
+    });
+  } catch(e) {
+    if (!silent) list.innerHTML = `<div style="color:#ff6b6b;padding:16px">Kapcsolódási hiba: ${e.message}</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+    clearTimeout(_liveTimer);
+    _liveTimer = setTimeout(() => loadLive(true), 7000);
+    _startCountdown(7);
+  }
+}
+
+function renderLive(matches, cacheAge) {
+  const list = document.getElementById('live-list');
+  if (!matches.length) {
+    list.innerHTML = '<div style="color:#555;padding:24px 0">Nincs élő VB meccs jelenleg.</div>';
+    return;
+  }
+  const cacheInfo = cacheAge != null
+    ? `&nbsp;|&nbsp; <span style="color:#555">Tippmix odds: ${cacheAge < 10 ? 'friss' : cacheAge + 'mp régi'}</span>`
+    : `&nbsp;|&nbsp; <span style="color:#444">Tippmix odds betöltés alatt...</span>`;
+  list.innerHTML = `<div style="font-size:0.8rem;color:#555;margin-bottom:16px">${matches.length} élő VB meccs &nbsp;|&nbsp; <span style="color:#ff4444">● LIVE</span>${cacheInfo}</div>`;
+  matches.forEach(m => list.appendChild(buildLiveRow(m)));
+}
+
+function buildLiveRow(m) {
+  const lp = m.live_probs || {};
+  const bets = m.live_bets || [];
+  const hasTippmix = m.has_tippmix_odds;
+  const minute = m.minute + (m.extra_time ? `+${m.extra_time}` : '');
+  const xgAvail = m.xg_home > 0 || m.xg_away > 0;
+
+  const bankroll = getBankroll();
+  // Recalculate stakes if user changed bankroll (bets already have server-side stake)
+  // We recompute from kelly_pct and kelly_frac if available
+  function getStake(b) {
+    if (b.kelly_frac !== undefined && b.kelly_pct !== undefined) {
+      return Math.round((b.kelly_pct / 100) * b.kelly_frac * bankroll);
+    }
+    return b.stake_ft || 0;
+  }
+
+  const redH = m.red_cards_home > 0 ? ` <span style="color:#ff4444">${'🟥'.repeat(m.red_cards_home)}</span>` : '';
+  const redA = m.red_cards_away > 0 ? ` <span style="color:#ff4444">${'🟥'.repeat(m.red_cards_away)}</span>` : '';
+
+  // --- Value bet cards (with actual Tippmix odds) ---
+  let betSection = '';
+  if (hasTippmix) {
+    const valueBets = bets.filter(b => b.value);
+    const allBets   = bets.filter(b => !b.value).slice(0, 6);
+
+    const makeRow = (b, isValue) => {
+      const stake = getStake(b);
+      const edgeColor = b.edge_pct >= 10 ? '#4cff91' : b.edge_pct >= 5 ? '#f0a020' : '#888';
+      const badge = isValue
+        ? `<span style="background:#1a3a1a;color:#4cff91;border:1px solid #2e5a2e;padding:1px 6px;border-radius:3px;font-size:0.7rem">FOGADJ</span>`
+        : `<span style="background:#1a1a2a;color:#555;border:1px solid #2a2a3a;padding:1px 6px;border-radius:3px;font-size:0.7rem">—</span>`;
+      return `<tr style="${isValue ? 'background:#0d1a0d' : ''}">
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#ccc">${b.market}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#ccc;font-size:0.75rem">${b.outcome}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#a0b0ff;font-weight:700;text-align:center">${b.model_prob}%</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#e8e8e8;font-weight:700;text-align:center">${b.tippmix_odds}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:${edgeColor};font-weight:700;text-align:center">${b.edge_pct > 0 ? '+' : ''}${b.edge_pct}%</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#4cff91;font-weight:700;text-align:center">${isValue && stake > 0 ? stake.toLocaleString('hu-HU') + ' Ft' : '—'}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;text-align:center">${badge}</td>
+      </tr>`;
+    };
+
+    const valueRows = valueBets.map(b => makeRow(b, true)).join('');
+    const otherRows = allBets.map(b => makeRow(b, false)).join('');
+
+    betSection = `
+    <div style="font-size:0.72rem;color:#6b7aff;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+      Élő value fogadások — Tippmix Pro odds
+      ${valueBets.length ? `<span style="color:#4cff91;margin-left:8px">${valueBets.length} value bet!</span>` : ''}
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;font-size:0.78rem;border-collapse:collapse;border:1px solid #1e2a3a">
+        <thead>
+          <tr style="background:#0d1020">
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#6b7aff;text-align:left">Piac</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#6b7aff;text-align:left">Kimenet</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#a0b0ff">Modell %</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#e8e8e8">Tippmix odds</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#f0a020">Edge %</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#4cff91">Kelly tét (Ft)</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#6b7aff">Döntés</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${valueRows}
+          ${otherRows}
+        </tbody>
+      </table>
+    </div>`;
+  } else {
+    // Fallback: no Tippmix live odds — show min odds + live Kelly calculator
+    const topBets = bets.filter(b => b.prob >= 50).slice(0, 8);
+    const uid = Math.random().toString(36).slice(2, 7); // unique id per match card
+
+    const betRows = topBets.map((b, i) => {
+      const rowId = `lkr_${uid}_${i}`;
+      const kfrac = b.kelly_frac || 0.125;
+      return `<tr id="${rowId}" data-prob="${b.prob/100}" data-kfrac="${kfrac}">
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#ccc">${b.market}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#a0b0ff;font-weight:700;text-align:center">${b.prob}%</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#888;text-align:center">${b.fair_odds}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;color:#f0a020;font-weight:700;text-align:center">≥ ${b.min_odds}</td>
+        <td style="padding:6px 10px;border:1px solid #1e2a3a;text-align:center">
+          <input type="number" value="${b.min_odds}" min="1.01" step="0.05"
+            style="width:65px;background:#0d1020;border:1px solid #2e3a5a;color:#e8e8e8;padding:3px 5px;border-radius:4px;font-size:0.78rem;text-align:center"
+            placeholder="odds"
+            oninput="liveKellyCalc('${rowId}', this.value)">
+        </td>
+        <td class="live-edge-out" style="padding:6px 10px;border:1px solid #1e2a3a;color:#555;font-weight:700;text-align:center;min-width:70px">—</td>
+        <td class="live-kelly-out" style="padding:6px 10px;border:1px solid #1e2a3a;color:#555;font-weight:700;text-align:center;min-width:80px">—</td>
+        <td class="live-win-out"  style="padding:6px 10px;border:1px solid #1e2a3a;color:#555;font-weight:700;text-align:center;min-width:80px">—</td>
+        <td class="live-prof-out" style="padding:6px 10px;border:1px solid #1e2a3a;color:#555;font-weight:700;text-align:center;min-width:80px">—</td>
+      </tr>`;
+    }).join('');
+
+    betSection = `
+    <div style="font-size:0.72rem;color:#6b7aff;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+      Fogadási kalkulátor — írd be a Tippmix Pro odds-ot
+    </div>
+    ${topBets.length ? `
+    <div style="overflow-x:auto">
+      <table style="width:100%;font-size:0.78rem;border-collapse:collapse;border:1px solid #1e2a3a">
+        <thead>
+          <tr style="background:#0d1020">
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#6b7aff;text-align:left">Fogadás</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#a0b0ff">Modell %</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#888">Fair odds</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#f0a020">Min. odds</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#e8e8e8">Tippmix odds <span style="color:#555;font-size:0.7rem">(írd be)</span></th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#f0a020">Edge %</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#4cff91">Kelly tét (Ft)</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#a0b0ff">Nyeremény (Ft)</th>
+            <th style="padding:6px 10px;border:1px solid #1e2a3a;color:#4cff91">Profit (Ft)</th>
+          </tr>
+        </thead>
+        <tbody>${betRows}</tbody>
+      </table>
+    </div>
+    <div style="font-size:0.7rem;color:#333;margin-top:6px">Bankroll: <b style="color:#555">${getBankroll().toLocaleString('hu-HU')} Ft</b> · Írd be az odds-ot amit Tippmix Pro mutat → megmutatja mennyit tegyél fel</div>`
+    : '<div style="color:#444;font-size:0.8rem">Nincs elég valószínűségű fogadás.</div>'}`;
+  }
+
+  const div = document.createElement('div');
+  div.className = `match-row ${bets.some(b => b.value) ? 'has-value' : ''}`;
+  div.style.marginBottom = '16px';
+  div.innerHTML = `
+    <div class="match-top">
+      <div>
+        <div class="match-teams">
+          ${m.home_team_raw}${redH} <span style="color:#ff4444;font-size:1.1rem">${m.home_score} — ${m.away_score}</span> ${m.away_team_raw}${redA}
+        </div>
+        <div style="font-size:0.75rem;color:#555;margin-top:4px">
+          <span style="color:#ff4444;font-weight:700">● ${minute}'</span>
+          &nbsp;·&nbsp; ~xG: <b style="color:#e8e8e8">${m.xg_home}</b> – <b style="color:#e8e8e8">${m.xg_away}</b>
+          &nbsp;·&nbsp; Labdabirtoklás: ${m.possession_home}% – ${m.possession_away}%
+          &nbsp;·&nbsp; Kapura: ${m.shots_on_target_home} – ${m.shots_on_target_away}
+          ${!xgAvail ? '&nbsp;·&nbsp;<span style="color:#444">(xG még nem elérhető)</span>' : ''}
+          ${hasTippmix ? '&nbsp;·&nbsp;<span style="color:#4cff91;font-size:0.7rem">✓ Tippmix odds</span>' : '<span style="color:#555;font-size:0.7rem">&nbsp;·&nbsp;Tippmix odds hiányzik</span>'}
+        </div>
+      </div>
+      <div style="text-align:right;font-size:0.75rem;color:#555">
+        <div>Előmeccs xG: ${m.pre_xg_home} – ${m.pre_xg_away}</div>
+        <div style="margin-top:2px">Élő modell súlya: ${Math.round((lp.live_weight||0)*100)}%</div>
+        <div style="margin-top:2px;color:#333">O2.5: ${((lp.over_2_5||0)*100).toFixed(0)}% &nbsp;·&nbsp; BTTS: ${((lp.btts||0)*100).toFixed(0)}%</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0;font-size:0.8rem">
+      <div style="background:#0d1a0d;border:1px solid #1e3a1e;border-radius:6px;padding:10px;text-align:center">
+        <div style="color:#555;font-size:0.7rem;margin-bottom:4px">HAZAI GYŐZELEM</div>
+        <div style="color:#4cff91;font-size:1.1rem;font-weight:700">${((lp.home_win||0)*100).toFixed(1)}%</div>
+        <div style="color:#444;font-size:0.7rem">fair: ${lp.home_win > 0 ? (1/lp.home_win).toFixed(2) : '—'}</div>
+      </div>
+      <div style="background:#0d0d1a;border:1px solid #1e1e3a;border-radius:6px;padding:10px;text-align:center">
+        <div style="color:#555;font-size:0.7rem;margin-bottom:4px">DÖNTETLEN</div>
+        <div style="color:#a0a8ff;font-size:1.1rem;font-weight:700">${((lp.draw||0)*100).toFixed(1)}%</div>
+        <div style="color:#444;font-size:0.7rem">fair: ${lp.draw > 0 ? (1/lp.draw).toFixed(2) : '—'}</div>
+      </div>
+      <div style="background:#1a0d0d;border:1px solid #3a1e1e;border-radius:6px;padding:10px;text-align:center">
+        <div style="color:#555;font-size:0.7rem;margin-bottom:4px">VENDÉG GYŐZELEM</div>
+        <div style="color:#ff8888;font-size:1.1rem;font-weight:700">${((lp.away_win||0)*100).toFixed(1)}%</div>
+        <div style="color:#444;font-size:0.7rem">fair: ${lp.away_win > 0 ? (1/lp.away_win).toFixed(2) : '—'}</div>
+      </div>
+    </div>
+
+    ${betSection}
+
+    <div style="margin-top:8px;font-size:0.7rem;color:#333">
+      Várható maradék gól: <b style="color:#555">${lp.exp_remaining_home}</b> – <b style="color:#555">${lp.exp_remaining_away}</b>
+    </div>`;
+  return div;
+}
+
+// ── Tippmix.hu ────────────────────────────────────────────────────────────
+let _tippmixData = [];
+
+function getBankroll() {
+  return parseFloat(document.getElementById('bankroll').value) || 10000;
+}
+
+function liveKellyCalc(rowId, oddsVal) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  const edgeOut  = row.querySelector('.live-edge-out');
+  const stakeOut = row.querySelector('.live-kelly-out');
+  const winOut   = row.querySelector('.live-win-out');
+  const profOut  = row.querySelector('.live-prof-out');
+  const odds = parseFloat(oddsVal);
+  const prob = parseFloat(row.dataset.prob);
+  const kfrac = parseFloat(row.dataset.kfrac);
+  const bankroll = getBankroll();
+  const clear = () => {
+    edgeOut.textContent  = '—'; edgeOut.style.color  = '#555';
+    stakeOut.textContent = '—'; stakeOut.style.color = '#555';
+    winOut.textContent   = '—'; winOut.style.color   = '#555';
+    profOut.textContent  = '—'; profOut.style.color  = '#555';
+  };
+  if (!odds || odds <= 1.0 || !prob) { clear(); return; }
+  const implied = 1 / odds;
+  const edge = (prob - implied) * 100;
+  const verdict = edge >= 7 ? '✓ Fogadj' : edge >= 0 ? '~ Gyenge' : '✗ Ne fogadj';
+  const edgeColor = edge >= 7 ? '#4cff91' : edge >= 0 ? '#f0a020' : '#ff6b6b';
+  edgeOut.innerHTML = `<span style="font-weight:700">${(edge >= 0 ? '+' : '') + edge.toFixed(1)}%</span><br><span style="font-size:0.68rem;font-weight:600">${verdict}</span>`;
+  edgeOut.style.color = edgeColor;
+  const kelly = Math.max(0, (prob * odds - 1) / (odds - 1));
+  const stake = Math.round(kelly * kfrac * bankroll);
+  if (stake <= 0) {
+    stakeOut.textContent = '—'; stakeOut.style.color = '#555';
+    winOut.textContent   = '—'; winOut.style.color   = '#555';
+    profOut.textContent  = '—'; profOut.style.color  = '#555';
+    return;
+  }
+  const win    = Math.round(stake * odds);
+  const profit = win - stake;
+  stakeOut.textContent = stake.toLocaleString('hu-HU') + ' Ft';  stakeOut.style.color = '#4cff91';
+  winOut.textContent   = win.toLocaleString('hu-HU') + ' Ft';    winOut.style.color   = '#a0b0ff';
+  profOut.textContent  = '+' + profit.toLocaleString('hu-HU') + ' Ft'; profOut.style.color = '#4cff91';
+}
+
+function rebuildStakes() {
+  if (_tippmixData.length)  renderTippmixList(_tippmixData);
+  if (_cornersData.length)  renderCorners(_cornersData);
+}
+
+const MKTPRIO = n =>
+  n.toLowerCase().includes('félidő') ? 0 :
+  n.includes('Döntetlennél') ? 3 :
+  n.includes('Gólszám') || n.includes('Mindkét') || n.includes('DNB') ? 2 :
+  n === '1X2' || n === 'Hazai győzelem' || n === 'Vendég győzelem' ? 1 : 0;
+
+
+async function loadTippmix() {
+  const list = document.getElementById('tippmix-list');
+  list.innerHTML = '<div class="loading">Headless böngésző megnyitása és Tippmix.hu betöltése... (~10mp)</div>';
+  try {
+    const res  = await fetch('/tippmix-matches');
+    const data = await res.json();
+    if (data.error) { list.innerHTML = `<div class="error">${data.error}</div>`; return; }
+    if (!data.length) { list.innerHTML = '<div class="empty-state">Nincs találat a Tippmixen.</div>'; return; }
+    _tippmixData = data;
+    renderTippmixList(data);
+  } catch(e) {
+    list.innerHTML = `<div class="error">Tippmix betöltési hiba: ${e.message}</div>`;
+  }
+}
+
+function matchBestEdge(m) {
+  // Best trusted (non-approximate) value bet edge for ranking matches
+  const trusted = (m.value_bets || []).filter(v =>
+    v.value &&
+    !['Szögletek', 'Statisztika'].includes(v.market_group)
+  );
+  return trusted.length > 0 ? Math.max(...trusted.map(v => v.edge_pct)) : -Infinity;
+}
+
+const FLAG_EMOJI = {
+  'USA': '🇺🇸', 'Kanada': '🇨🇦', 'Mexikó': '🇲🇽',
+  'Argentína': '🇦🇷', 'Brazília': '🇧🇷', 'Franciaország': '🇫🇷',
+  'Anglia': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Spanyolország': '🇪🇸', 'Portugália': '🇵🇹',
+  'Németország': '🇩🇪', 'Hollandia': '🇳🇱', 'Horvátország': '🇭🇷',
+  'Marokkó': '🇲🇦', 'Szenegál': '🇸🇳', 'Japán': '🇯🇵',
+  'Dél-Korea': '🇰🇷', 'Ausztrália': '🇦🇺', 'Szerbia': '🇷🇸',
+  'Svájc': '🇨🇭', 'Uruguay': '🇺🇾', 'Kolumbia': '🇨🇴',
+  'Ecuador': '🇪🇨', 'Ghána': '🇬🇭', 'Kamerun': '🇨🇲',
+  'Nigéria': '🇳🇬', 'Elefántcsontpart': '🇨🇮', 'Szaúd-Arábia': '🇸🇦',
+  'Irán': '🇮🇷', 'Irak': '🇮🇶', 'Jordánia': '🇯🇴',
+  'Kongói DK': '🇨🇩', 'Algéria': '🇩🇿', 'Egyiptom': '🇪🇬',
+  'Mali': '🇲🇱', 'Dél-Afrika': '🇿🇦', 'Tunézia': '🇹🇳',
+  'Zambia': '🇿🇲', 'Tanzánia': '🇹🇿', 'Ukrajna': '🇺🇦',
+  'Lengyelország': '🇵🇱', 'Törökország': '🇹🇷', 'Ausztria': '🇦🇹',
+  'Norvégia': '🇳🇴', 'Panama': '🇵🇦', 'Costa Rica': '🇨🇷',
+  'Honduras': '🇭🇳', 'Jamaica': '🇯🇲', 'Venezuela': '🇻🇪',
+  'Bolívia': '🇧🇴', 'Paraguay': '🇵🇾', 'Chile': '🇨🇱',
+  'Peru': '🇵🇪', 'Új-Zéland': '🇳🇿', 'Kongói Köztársaság': '🇨🇬',
+  'Ruanda': '🇷🇼', 'Mozambik': '🇲🇿', 'Benin': '🇧🇯',
+  'Líbia': '🇱🇾', 'Guinea': '🇬🇳', 'Katar': '🇶🇦',
+  'Üzbegisztán': '🇺🇿', 'Omán': '🇴🇲', 'Magyarország': '🇭🇺',
+  'Románia': '🇷🇴', 'Csehország': '🇨🇿', 'Szlovákia': '🇸🇰',
+  'Albánia': '🇦🇱', 'Görögország': '🇬🇷', 'Skócia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Írország': '🇮🇪', 'Dánia': '🇩🇰',
+  'Svédország': '🇸🇪', 'Finnország': '🇫🇮', 'Izland': '🇮🇸',
+  'Belgium': '🇧🇪', 'Olaszország': '🇮🇹', 'Fehéroroszország': '🇧🇾',
+  'Montenegró': '🇲🇪', 'Bosznia-Hercegovina': '🇧🇦',
+  'Észak-Macedónia': '🇲🇰', 'Szlovénia': '🇸🇮', 'Grúzia': '🇬🇪',
+  'Örményország': '🇦🇲', 'Kazahsztán': '🇰🇿', 'Izrael': '🇮🇱',
+  'Trinidad és Tobago': '🇹🇹', 'El Salvador': '🇸🇻', 'Haiti': '🇭🇹',
+  'Kuba': '🇨🇺', 'Nicaragua': '🇳🇮', 'Guatemala': '🇬🇹',
+  'Indonézia': '🇮🇩', 'Thaiföld': '🇹🇭', 'Vietnam': '🇻🇳',
+  'Bahrain': '🇧🇭', 'Kuvait': '🇰🇼', 'Belize': '🇧🇿',
+};
+
+const FLAG_MAP = {};
+for (const [hu, emoji] of Object.entries(FLAG_EMOJI)) {
+  // derive 2-letter ISO from regional indicator pair (U+1F1E6=A ... U+1F1FF=Z)
+  const cp = [...emoji].map(c => c.codePointAt(0));
+  if (cp.length >= 2 && cp[0] >= 0x1F1E6 && cp[0] <= 0x1F1FF) {
+    FLAG_MAP[hu] = String.fromCharCode(cp[0]-0x1F1E6+65) + String.fromCharCode(cp[1]-0x1F1E6+65);
+  }
+}
+// Overrides for subdivision flags (Scotland, Wales, England) that don't use regional indicators
+FLAG_MAP['Anglia']  = 'GB';
+FLAG_MAP['Skócia']  = 'GB';
+FLAG_MAP['Wales']   = 'GB';
+
+function flagImg(name) {
+  const code = FLAG_MAP[name];
+  if (!code) return '';
+  return `<img src="https://flagcdn.com/w20/${code.toLowerCase()}.png" width="20" height="14" style="border-radius:2px;vertical-align:middle;margin-right:5px" onerror="this.style.display='none'">`;
+}
+
+function renderTippmixList(data) {
+  const list = document.getElementById('tippmix-list');
+  const bankroll = getBankroll();
+  const wc = data
+    .filter(m => m.is_wc)
+    .sort((a, b) => {
+      const ta = a.event_date ? new Date(a.event_date).getTime() : Infinity;
+      const tb = b.event_date ? new Date(b.event_date).getTime() : Infinity;
+      if (ta !== tb) return ta - tb;
+      return matchBestEdge(b) - matchBestEdge(a);
+    });
+  const valCount = wc.reduce((s, m) => s + ((m.value_bets || []).filter(v => v.value).length), 0);
+
+  // ── Recommended bets section ──────────────────────────────────────────────
+  function betStake(v) {
+    const isApprox = ['Szögletek', 'Statisztika'].includes(v.market_group);
+    const full = Math.max(100, Math.round(bankroll * v.kelly_pct / 100 / 100) * 100);
+    return { stake: Math.max(100, Math.round(full / (isApprox ? 8 : 4) / 100) * 100), isApprox };
+  }
+
+  // Same priority logic as the match cards: non-approx first, then DNB > Gólszám > 1X2, then edge
+  const MKTP = n => n.toLowerCase().includes('félidő') ? 0 : n.includes('Döntetlennél') ? 3 : n.includes('Gólszám') || n.includes('Mindkét') ? 2 : n === '1X2' ? 1 : 0;
+
+  function cardSortKey(r) {
+    const tier = r.isApprox ? 1 : 0;
+    return [tier, -MKTP(r.v.market), -r.v.edge_pct];
+  }
+  function cmpKey(a, b) {
+    const ka = cardSortKey(a), kb = cardSortKey(b);
+    for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] - kb[i];
+    return 0;
+  }
+
+  const nowMs = Date.now();
+  // One entry per match: primary = best bet (same logic as match card), secondary unused
+  const bestPerMatch = [];
+  for (const m of wc) {
+    const label = `${m.home_team_hu} – ${m.away_team_hu}`;
+    const _d = m.event_date ? new Date(m.event_date) : null;
+    const time  = _d ? _d.toLocaleString('hu-HU', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+    const kickoffMs = m.event_date ? new Date(m.event_date).getTime() : null;
+    const minsFromNow = kickoffMs ? (kickoffMs - nowMs) / 60000 : null;
+    const matchStatus = kickoffMs === null ? 'unknown'
+      : minsFromNow > 60   ? 'upcoming'
+      : minsFromNow > 0    ? 'soon'
+      : minsFromNow > -110 ? 'live'
+      : 'finished';
+    const allBets = (m.value_bets || []).filter(v => v.value).map(v => {
+      const { stake, isApprox } = betStake(v);
+      return { label, time, v, stake, isApprox, matchStatus, homeHu: m.home_team_hu, awayHu: m.away_team_hu };
+    });
+    if (!allBets.length) continue;
+    // Mirror EXACT logic of match card: trusted = non-approx, edge >= 7, sort by MKTP then edge
+    const trustedBets = allBets.filter(b => !b.isApprox && b.v.edge_pct >= 7)
+      .sort((a, b) => {
+        const pd = MKTP(b.v.market) - MKTP(a.v.market);
+        return pd !== 0 ? pd : b.v.edge_pct - a.v.edge_pct;
+      });
+    // Fallback: best non-approx positive-edge value bet if none cross 7%
+    const fallbackBets = allBets.filter(b => !b.isApprox && b.v.edge_pct > 0)
+      .sort((a, b) => b.v.edge_pct - a.v.edge_pct);
+    const primary = trustedBets[0] || fallbackBets[0];
+    if (!primary) continue; // no positive-edge bet → skip this match entirely
+    // Secondary = highest edge with different market+outcome
+    const secondary = [...allBets].sort((a, b) => b.v.edge_pct - a.v.edge_pct)
+      .find(b => b.v.market !== primary.v.market || b.v.outcome !== primary.v.outcome) || null;
+    bestPerMatch.push({ primary, secondary, matchStatus, kickoffMs: kickoffMs || Infinity });
+  }
+  // Sort: kick-off time ascending, then primary edge descending
+  bestPerMatch.sort((a, b) => {
+    if (a.kickoffMs !== b.kickoffMs) return a.kickoffMs - b.kickoffMs;
+    return b.primary.v.edge_pct - a.primary.v.edge_pct;
+  });
+  const top10PerMatch = bestPerMatch.slice(0, 10);
+
+  // Flat top 10: reuse the same primary+secondary bets already picked per match card
+  // so the two lists are always consistent for the same match
+  const allValueBets = [];
+  for (const entry of bestPerMatch) {
+    allValueBets.push({ bet: entry.primary, isPrimary: true, matchLabel: entry.primary.label, kickoffMs: entry.kickoffMs });
+    if (entry.secondary) allValueBets.push({ bet: entry.secondary, isPrimary: false, matchLabel: entry.primary.label, kickoffMs: entry.kickoffMs });
+  }
+  allValueBets.sort((a, b) => {
+    // Most likely outcome first (model_prob desc), then primary before secondary
+    if (b.bet.v.model_prob !== a.bet.v.model_prob) return b.bet.v.model_prob - a.bet.v.model_prob;
+    return a.isPrimary ? -1 : 1;
+  });
+  const flatTop10 = allValueBets.slice(0, 10).map(e => e.bet);
+
+  function betChip(b) {
+    const col = b.isApprox ? '#6b7aff' : b.v.edge_pct >= 10 ? '#4cff91' : '#f0a020';
+    const flag = b.isApprox
+      ? ' <span style="font-size:0.57rem;color:#6b7aff;border:1px solid #6b7aff44;padding:0 3px;border-radius:2px">~</span>'
+      : '';
+    return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:0.82rem;color:#e8e8e8;font-weight:700;flex:1;min-width:100px">${b.v.market}${flag} — <span style="color:${col}">${b.v.outcome}</span></span>
+      <span style="font-size:0.72rem;color:#444">odds <b style="color:#ccc">${b.v.best_odds}</b></span>
+      <span style="font-size:0.72rem;color:#444">+<b style="color:${col}">${b.v.edge_pct}%</b></span>
+      <span style="font-size:0.9rem;font-weight:800;color:${col};white-space:nowrap">${b.stake.toLocaleString('hu-HU')} Ft</span>
+    </div>`;
+  }
+
+  function recRow(entry, i) {
+    const { primary: r, secondary: s, matchStatus } = entry;
+    const isLive = matchStatus === 'live';
+    const isSoon = matchStatus === 'soon';
+    const wrapStyle = isLive
+      ? 'background:#1a0808;border:1px solid #ff4444;border-radius:5px;padding:8px 12px;box-shadow:0 0 10px #ff444455'
+      : isSoon
+      ? 'background:#1a1208;border:1px solid #f0a020;border-radius:5px;padding:8px 12px;box-shadow:0 0 10px #f0a02044'
+      : 'background:#0a0f1a;border:1px solid #1a2235;border-radius:5px;padding:8px 12px';
+    const statusBadge = isLive
+      ? '<span style="font-size:0.6rem;font-weight:800;color:#ff4444;background:#ff444433;padding:1px 6px;border-radius:3px;letter-spacing:.05em">● ÉLŐ</span>'
+      : isSoon
+      ? '<span style="font-size:0.6rem;font-weight:700;color:#f0a020;background:#f0a02033;padding:1px 6px;border-radius:3px">⏱ &lt;1h</span>'
+      : '';
+    const secondaryHTML = s ? `
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid #1a2235">
+        <span style="font-size:0.62rem;color:#444;text-transform:uppercase;letter-spacing:.06em">szintén ajánlott&nbsp;&nbsp;</span>
+        ${betChip(s)}
+      </div>` : '';
+    return `<div style="${wrapStyle}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+        <span style="font-size:0.68rem;color:#444">${i+1}.</span>
+        <span style="font-size:0.72rem;font-weight:700;color:#6b7aff">${r.time}</span>
+        ${statusBadge}
+        <span style="font-size:0.75rem;color:#aaa;font-weight:600">${flagImg(r.homeHu)}${r.homeHu} – ${flagImg(r.awayHu)}${r.awayHu}</span>
+      </div>
+      ${betChip(r)}
+      ${secondaryHTML}
+    </div>`;
+  }
+
+  function flatRow(b, i) {
+    const isLive = b.matchStatus === 'live';
+    const isSoon = b.matchStatus === 'soon';
+    const wrapStyle = isLive
+      ? 'background:#1a0808;border:1px solid #ff4444;border-radius:5px;padding:8px 12px;box-shadow:0 0 10px #ff444455'
+      : isSoon
+      ? 'background:#1a1208;border:1px solid #f0a020;border-radius:5px;padding:8px 12px;box-shadow:0 0 10px #f0a02044'
+      : 'background:#0a0f1a;border:1px solid #1a2235;border-radius:5px;padding:8px 12px';
+    const statusBadge = isLive
+      ? '<span style="font-size:0.6rem;font-weight:800;color:#ff4444;background:#ff444433;padding:1px 6px;border-radius:3px;letter-spacing:.05em">● ÉLŐ</span>'
+      : isSoon
+      ? '<span style="font-size:0.6rem;font-weight:700;color:#f0a020;background:#f0a02033;padding:1px 6px;border-radius:3px">⏱ &lt;1h</span>'
+      : '';
+    return `<div style="${wrapStyle}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+        <span style="font-size:0.68rem;color:#444">${i+1}.</span>
+        <span style="font-size:0.72rem;font-weight:700;color:#6b7aff">${b.time}</span>
+        ${statusBadge}
+        <span style="font-size:0.75rem;color:#aaa;font-weight:600">${flagImg(b.homeHu)}${b.homeHu} – ${flagImg(b.awayHu)}${b.awayHu}</span>
+      </div>
+      ${betChip(b)}
+    </div>`;
+  }
+
+  const slipHTML = top10PerMatch.length ? `
+    <div style="background:#080c14;border:1px solid #1a2235;border-radius:6px;overflow:hidden">
+      <div style="padding:10px 16px;border-bottom:1px solid #1a2235;font-size:0.82rem;font-weight:700;color:#e8e8e8">⭐ Top 10 — egy meccs, egy tipp</div>
+      <div style="padding:10px;display:flex;flex-direction:column;gap:6px">
+        ${top10PerMatch.map((e, i) => recRow(e, i)).join('')}
+      </div>
+    </div>` : '';
+
+  const flatHTML = flatTop10.length ? `
+    <div style="background:#080c14;border:1px solid #1a2235;border-radius:6px;overflow:hidden">
+      <div style="padding:10px 16px;border-bottom:1px solid #1a2235;font-size:0.82rem;font-weight:700;color:#e8e8e8">🔥 Abszolút Top 10 — legjobb fogadások</div>
+      <div style="padding:10px;display:flex;flex-direction:column;gap:6px">
+        ${flatTop10.map((b, i) => flatRow(b, i)).join('')}
+      </div>
+    </div>` : '';
+
+  const bothLists = (slipHTML || flatHTML) ? `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
+      ${slipHTML}
+      ${flatHTML}
+    </div>` : '';
+
+  list.innerHTML = `
+    <div style="font-size:0.8rem;color:#555;margin-bottom:16px">
+      ${wc.length} VB meccs &nbsp;|&nbsp; <span style="color:#4cff91">${valCount} value bet összesen</span>
+    </div>
+    ${bothLists}`;
+
+  if (wc.length) {
+    wc.forEach((m, i) => list.appendChild(buildTippmixRow(m, i + 1)));
+  } else {
+    list.innerHTML += '<div style="color:#555;padding:24px 0">Nincs elérhető VB meccs Tippmix-en.</div>';
+  }
+}
+
+function buildVbetCard(v, bankroll, isTopPick = false, isSecondaryPick = false) {
+  const fullStake = Math.max(100, Math.round(bankroll * v.kelly_pct / 100 / 100) * 100);
+  const isApprox  = ['Szögletek', 'Statisztika'].includes(v.market_group);
+  // Recommended stake: ¼ Kelly for goals, ⅛ Kelly for approximations
+  const divisor   = isApprox ? 8 : 4;
+  const recStake  = Math.max(100, Math.round(fullStake / divisor / 100) * 100);
+  const recProfit = Math.round(recStake * v.best_odds) - recStake;
+  const approxTag = isApprox ? '<span class="approx-tag">~becslés</span>' : '';
+  const groupTag  = v.market_group ? `<span style="font-size:0.68rem;color:#444;margin-left:6px">[${v.market_group}]</span>` : '';
+  const edgeColor = isTopPick ? '#4cff91' : isApprox ? '#a0cc60' : '#4cff91';
+  const stakeColor = isTopPick ? '#4cff91' : isApprox ? '#a0cc60' : '#4cff91';
+
+  const fullProfit = Math.round(fullStake * v.best_odds) - fullStake;
+  const topBadge   = isTopPick ? `<div class="top-pick-badge">⭐ LEGJOBB FOGADÁS EZEN A MECCSEN</div>` : '';
+  const secondaryBadge = isSecondaryPick ? `<div style="font-size:0.65rem;font-weight:700;color:#6b7aff;background:#6b7aff18;border:1px solid #6b7aff33;border-radius:4px;padding:2px 8px;margin-bottom:6px;display:inline-block">✦ szintén ajánlott</div>` : '';
+  const recDivisorLabel = isApprox ? '⅛ Kelly' : '¼ Kelly';
+
+  return `
+    <div class="vbet-card${isTopPick ? ' top-pick' : isApprox ? ' approx' : ''}">
+      ${topBadge}
+      ${secondaryBadge}
+      <div class="vbet-card-meta">${v.market}${groupTag}${approxTag}</div>
+      <div class="vbet-card-outcome">${v.outcome}</div>
+      <div class="vbet-card-stats" style="margin-top:4px">
+        odds: <b style="color:#e8e8e8">${v.best_odds}</b>
+        &nbsp;|&nbsp; modell: <b style="color:#aaa">${v.model_prob}%</b>
+        &nbsp;|&nbsp; Tippmix: <b style="color:#aaa">${v.implied_prob}%</b>
+        &nbsp;|&nbsp; edge: <b style="color:${edgeColor}">+${v.edge_pct}%</b>
+      </div>
+      <div class="stake-row">
+        <div class="stake-col" style="background:#0d0d0f">
+          <div class="stake-col-label" style="color:#444">Teljes Kelly tét</div>
+          <div class="stake-col-amount" style="color:#666">${fullStake.toLocaleString('hu-HU')} Ft</div>
+          <div class="stake-col-profit" style="color:#444">+${fullProfit.toLocaleString('hu-HU')} Ft profit</div>
+        </div>
+        <div class="stake-col" style="background:#071a07">
+          <div class="stake-col-label" style="color:${stakeColor}">${recDivisorLabel} — javasolt tét</div>
+          <div class="stake-col-amount" style="color:${stakeColor}">${recStake.toLocaleString('hu-HU')} Ft</div>
+          <div class="stake-col-profit" style="color:${stakeColor}">+${recProfit.toLocaleString('hu-HU')} Ft profit</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function buildTippmixRow(m, rank) {
+  const bankroll = getBankroll();
+  const hw = (m.home_win * 100).toFixed(1);
+  const dr = (m.draw    * 100).toFixed(1);
+  const aw = (m.away_win* 100).toFixed(1);
+  const dt = m.event_date ? new Date(m.event_date).toLocaleString('hu-HU') : '';
+
+  const allVbets = m.value_bets || [];
+  const vbets1x2     = allVbets.filter(v => v.value && v.market === '1X2');
+  const vbetsDetail  = allVbets.filter(v => v.value && v.market !== '1X2');
+  const allAnalyzed  = allVbets.filter(v => !v.value && v.model_prob > 0);
+
+  // Identify the single best bet per match (non-approx, edge ≥ 7%, priority: DNB > Gólszám O/U > 1X2)
+  const MKTPRIO = n => n.toLowerCase().includes('félidő') ? 0 : n.includes('Döntetlennél') ? 3 : n.includes('Gólszám') ? 2 : n === '1X2' ? 1 : 0;
+  const trusted = allVbets.filter(v =>
+    v.value &&
+    !['Szögletek', 'Statisztika'].includes(v.market_group) &&
+    v.edge_pct >= 7
+  ).sort((a, b) => {
+    const pd = MKTPRIO(b.market) - MKTPRIO(a.market);
+    return pd !== 0 ? pd : b.edge_pct - a.edge_pct;
+  });
+  const topKey = trusted.length > 0 ? trusted[0].market + '|||' + trusted[0].outcome : null;
+  const secondaryKey = (() => {
+    if (!topKey) return null;
+    const [topMkt, topOut] = topKey.split('|||');
+    const sec = allVbets.find(v => v.value && (v.market !== topMkt || v.outcome !== topOut));
+    return sec ? sec.market + '|||' + sec.outcome : null;
+  })();
+  const totalValue   = allVbets.filter(v => v.value).length;
+  const totalMarkets = allVbets.length;
+
+  // ── Section 1: Who wins (1X2) ────────────────────────────────────────────
+  const oddsRow = `
+    <div style="display:flex;gap:16px;font-size:0.82rem;color:#888;flex-wrap:wrap">
+      <span>1 (hazai): <b style="color:#e8e8e8">${m.home_odds}</b></span>
+      <span>X: <b style="color:#e8e8e8">${m.draw_odds}</b></span>
+      <span>2 (vendég): <b style="color:#e8e8e8">${m.away_odds}</b></span>
+      <span style="color:#555">xG: ${m.exp_home_goals} – ${m.exp_away_goals}</span>
+    </div>`;
+
+  let cards1x2 = '';
+  if (vbets1x2.length) {
+    cards1x2 = `<div style="margin-top:10px">${vbets1x2.map(v => {
+      const isTop = topKey && (v.market + '|||' + v.outcome === topKey);
+      const isSec = !isTop && secondaryKey && (v.market + '|||' + v.outcome === secondaryKey);
+      return buildVbetCard(v, bankroll, isTop, isSec);
+    }).join('')}</div>`;
+  } else if (totalValue === 0) {
+    cards1x2 = `<div style="margin-top:8px;font-size:0.78rem;color:#333">Nincs 1X2 value bet ennél a meccsnél</div>`;
+  }
+
+  // ── Section 2: Detailed bets (collapsible) ───────────────────────────────
+  let detailSection = '';
+  if (m.is_wc && totalMarkets > 0) {
+    const uid = 'det_' + Math.random().toString(36).slice(2);
+    const tblId = 'tbl_' + Math.random().toString(36).slice(2);
+    const detailValueCards = vbetsDetail.map(v => {
+      const isTop = topKey && (v.market + '|||' + v.outcome === topKey);
+      const isSec = !isTop && secondaryKey && (v.market + '|||' + v.outcome === secondaryKey);
+      return buildVbetCard(v, bankroll, isTop, isSec);
+    }).join('');
+    const allMarketsRows = allAnalyzed.slice(0, 100).map(v => {
+      const isApprox = ['Szögletek', 'Statisztika'].includes(v.market_group);
+      return `<tr>
+        <td style="color:#666;max-width:160px;word-break:break-word">${v.market}${isApprox ? ' <span style="font-size:0.65rem;color:#555">(~)</span>' : ''}</td>
+        <td style="max-width:150px;word-break:break-word">${v.outcome}</td>
+        <td>${v.best_odds}</td>
+        <td>${v.model_prob}%</td>
+        <td>${v.implied_prob}%</td>
+        <td class="${v.edge_pct >= 0 ? 'edge-pos' : 'edge-neg'}">${v.edge_pct >= 0 ? '+' : ''}${v.edge_pct}%</td>
+      </tr>`;
+    }).join('');
+
+    const btnLabel = vbetsDetail.length
+      ? `▸ Részletes elemzés (${vbetsDetail.length} value bet + szögletek/lesek)`
+      : `▸ Részletes elemzés megnyitása`;
+
+    detailSection = `
+      <div class="section-divider"></div>
+      <button id="btn_${uid}" class="expand-btn" onclick="toggleDetail('${uid}')">
+        ${btnLabel}
+      </button>
+      <div id="${uid}" style="display:none;margin-top:12px">
+        ${vbetsDetail.length
+          ? `<div class="section-label">Részletes value betek (szögletek és lesek ~ becsült)</div>
+             <div style="margin-bottom:12px">${detailValueCards}</div>`
+          : `<div style="font-size:0.8rem;color:#444;margin-bottom:12px">Nincs más value bet (csak szögletek/lesek elemzés lent)</div>`}
+        ${allAnalyzed.length
+          ? `<button id="btn_${tblId}" class="expand-btn" style="margin-bottom:8px" onclick="toggleDetail('${tblId}')">
+               ▸ Összes elemzett piac (${allAnalyzed.length} piac — nem value bet)
+             </button>
+             <div id="${tblId}" style="display:none;overflow-x:auto">
+               <table style="font-size:0.78rem">
+                 <thead><tr>
+                   <th>Piac</th><th>Kimenetel</th><th>Odds</th>
+                   <th>Modell%</th><th>Impl%</th><th>Edge%</th>
+                 </tr></thead>
+                 <tbody>${allMarketsRows}</tbody>
+               </table>
+             </div>`
+          : ''}
+      </div>`;
+  }
+
+  const bestEdge = matchBestEdge(m);
+  const rankColor = rank === 1 ? '#ffd700' : rank === 2 ? '#c0c0c0' : rank === 3 ? '#cd7f32' : '#444';
+  const rankLabel = rank ? `<span style="font-size:0.78rem;font-weight:700;color:${rankColor};margin-right:6px">#${rank}</span>` : '';
+
+  const div = document.createElement('div');
+  div.className = 'match-row' + (m.has_value ? ' has-value' : '');
+  div.innerHTML = `
+    <div class="match-top">
+      <div>
+        <div class="match-teams">${rankLabel}${flagImg(m.home_team_hu)}${m.home_team_hu} vs ${flagImg(m.away_team_hu)}${m.away_team_hu}</div>
+        <div style="font-size:0.75rem;color:#555;margin-top:2px">
+          ${m.competition} &nbsp;·&nbsp; ${dt}
+          ${m.is_wc ? '&nbsp;·&nbsp;<span style="color:#6b7aff">VB 2026</span>' : ''}
+          ${totalMarkets > 0 ? `&nbsp;·&nbsp;<span style="color:#444">${totalMarkets} piac</span>` : ''}
+          ${bestEdge > -Infinity ? `&nbsp;·&nbsp;<span style="color:#888">legjobb edge: <b style="color:#4cff91">+${bestEdge.toFixed(1)}%</b></span>` : ''}
+        </div>
+      </div>
+      ${totalValue > 0
+        ? `<span class="value-pill">${totalValue} VALUE BET</span>`
+        : '<span style="color:#333;font-size:0.75rem">nincs edge</span>'}
+    </div>
+
+    <div class="mini-prob">
+      <div style="flex:${hw};background:#2d4a8a"></div>
+      <div style="flex:${dr};background:#2a2a3a"></div>
+      <div style="flex:${aw};background:#3a2020"></div>
+    </div>
+    <div class="mini-probs">
+      <span>${hw}% ${m.home_team}</span>
+      <span>${dr}% Döntetlen</span>
+      <span>${aw}% ${m.away_team}</span>
+    </div>
+
+    <div class="section-label">Ki nyeri a meccset?</div>
+    ${oddsRow}
+    ${cards1x2}
+    ${detailSection}`;
+
+  return div;
+}
+
+function toggleDetail(id) {
+  const el  = document.getElementById(id);
+  const btn = document.getElementById('btn_' + id);
+  if (!el) return;
+  const open = el.style.display === 'none';
+  el.style.display = open ? 'block' : 'none';
+  if (btn) btn.classList.toggle('open', open);
+  if (btn) btn.textContent = btn.textContent.replace(/[▸▾]/, open ? '▾' : '▸');
+}
+
+function toggleGuide() {
+  const body = document.getElementById('guide-body');
+  const btn  = document.querySelector('.guide-toggle');
+  const open = !body.classList.contains('open');
+  body.classList.toggle('open', open);
+  btn.textContent = open
+    ? '📖 Mikor és mennyit fogadjak? — útmutató (kattints a bezáráshoz)'
+    : '📖 Mikor és mennyit fogadjak? — útmutató (kattints a megnyitáshoz)';
+}
+
+function toggleLiveGuide() {
+  const body = document.getElementById('live-guide-body');
+  const btn  = document.querySelector('#tab-live .guide-toggle');
+  const open = !body.classList.contains('open');
+  body.classList.toggle('open', open);
+  btn.textContent = open
+    ? '📖 Élő fogadás szabályok — útmutató (kattints a bezáráshoz)'
+    : '📖 Élő fogadás szabályok — útmutató (kattints a megnyitáshoz)';
+}
+
+// ── All Teams / Demo ──────────────────────────────────────────────────────
+const DEMO = [
+  ["Brazil","Argentina"],["Germany","France"],["Spain","England"],
+  ["Portugal","Netherlands"],["United States","Mexico"],
+  ["Argentina","France"],["Brazil","Germany"],["Morocco","Spain"],
+  ["Japan","Korea Republic"],["Uruguay","Colombia"]
+];
+
+async function buildDemoCards() {
+  const grid = document.getElementById('demo-grid');
+  for (const [h, a] of DEMO) {
+    try {
+      const res = await fetch(`/predict?home=${encodeURIComponent(h)}&away=${encodeURIComponent(a)}&neutral=true`);
+      const d   = await res.json();
+      if (!res.ok) continue;
+      const hw = (d.home_win*100).toFixed(0), dr = (d.draw*100).toFixed(0), aw = (d.away_win*100).toFixed(0);
+      const card = document.createElement('div');
+      card.className = 'demo-card';
+      card.innerHTML = `
+        <div class="match">${h} vs ${a}</div>
+        <div class="mini-prob" style="margin-bottom:6px">
+          <div style="flex:${hw};background:#2d4a8a"></div>
+          <div style="flex:${dr};background:#2a2a3a"></div>
+          <div style="flex:${aw};background:#3a2020"></div>
+        </div>
+        <div class="probs">
+          <span>${hw}% Hazai</span><span>${dr}% Döntetlen</span><span>${aw}% Vendég</span>
+        </div>
+        <div style="font-size:0.75rem;color:#555;margin-top:6px">xG: ${d.exp_home_goals} – ${d.exp_away_goals}</div>`;
+      grid.appendChild(card);
+    } catch(e) { /* skip */ }
+  }
+}
+
+buildDemoCards();
+
+// ── Corners tab ───────────────────────────────────────────────────────────────
+let _cornersData = [];
+
+function renderCorners(data) {
+  const list = document.getElementById('corners-list');
+  if (!data.length) { list.innerHTML = '<div class="empty-state">Nincs corner value bet jelenleg.</div>'; return; }
+  const bankroll = getBankroll();
+  list.innerHTML = '';
+  data.forEach((m, mi) => {
+    const div = document.createElement('div');
+    div.className = 'match-row' + (m.has_value ? ' has-value' : '');
+    const dt = m.event_date ? new Date(m.event_date).toLocaleString('hu-HU', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+    const vbets = (m.value_bets || []).filter(v => v.value);
+    const extraId = `corner-extra-${mi}`;
+
+    let betsHTML = '<div style="font-size:0.78rem;color:#333;margin-top:8px">Nincs corner value bet ennél a meccsnél</div>';
+    if (vbets.length) {
+      const topCard  = buildVbetCard(vbets[0], bankroll, true, false);
+      const extraCards = vbets.slice(1).map((v, i) => buildVbetCard(v, bankroll, false, i === 0)).join('');
+      const toggleBtn = vbets.length > 1
+        ? `<button onclick="toggleCornerExtra('${extraId}', this)"
+             style="margin-top:8px;background:none;border:1px solid #1a2235;border-radius:6px;color:#555;font-size:0.75rem;padding:4px 12px;cursor:pointer;width:100%">
+             + ${vbets.length - 1} további tipp ▾
+           </button>` : '';
+      betsHTML = `
+        <div style="margin-top:10px">${topCard}</div>
+        <div id="${extraId}" style="display:none">${extraCards}</div>
+        ${toggleBtn}`;
+    }
+
+    div.innerHTML = `
+      <div class="match-top">
+        <div>
+          <div class="match-teams">${flagImg(m.home_team_hu)}${m.home_team_hu} vs ${flagImg(m.away_team_hu)}${m.away_team_hu}</div>
+          <div style="font-size:0.75rem;color:#555;margin-top:2px">${dt} &nbsp;·&nbsp; Várható szögletek: <b style="color:#aaa">${m.exp_home_corners} – ${m.exp_away_corners}</b> (összesen: <b style="color:#6b7aff">${m.exp_total_corners}</b>)</div>
+        </div>
+      </div>
+      ${betsHTML}
+    `;
+    list.appendChild(div);
+  });
+}
+
+function toggleCornerExtra(id, btn) {
+  const el = document.getElementById(id);
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  const count = el.querySelectorAll('.vbet-card').length;
+  btn.textContent = open ? `+ ${count} további tipp ▾` : `▴ kevesebb`;
+}
+
+async function loadCorners() {
+  const list = document.getElementById('corners-list');
+  list.innerHTML = '<div class="empty-state">Betöltés...</div>';
+  try {
+    const r = await fetch('/tippmix-corners');
+    const data = await r.json();
+    if (data.error) { list.innerHTML = `<div class="error">${data.error}</div>`; return; }
+    _cornersData = data;
+    renderCorners(data);
+  } catch(e) {
+    list.innerHTML = `<div class="error">Hiba: ${e.message}</div>`;
+  }
+}
+
+async function retrainCorners() {
+  const btn = document.getElementById('retrain-corners-btn');
+  const panel = document.getElementById('retrain-corners-panel');
+  btn.disabled = true;
+  btn.textContent = '⏳ Tanítás folyamatban...';
+  panel.innerHTML = '<div style="color:#555;font-size:0.8rem;padding:8px 0">Historikus szöglet adatok letöltése ESPN-ről (~1-2 perc)...</div>';
+  try {
+    const r = await fetch('/retrain-corners');
+    const data = await r.json();
+    if (data.status === 'error') throw new Error(data.message);
+    if (data.status === 'up_to_date') {
+      panel.innerHTML = `<div style="background:#0a0a1a;border:1px solid #2a2a4a;border-radius:8px;padding:12px 16px;margin-bottom:12px">
+        <div style="color:#6b7aff;font-weight:700;margin-bottom:4px">✅ Már naprakész!</div>
+        <div style="font-size:0.8rem;color:#aaa">Nincs új meccs az utolsó tanítás óta (${data.last_trained_through}) · ${data.total_matches} meccs összesen</div>
+      </div>`;
+      btn.textContent = '✅ Naprakész';
+    } else {
+      const detail = data.is_first_run
+        ? `Első tanítás · összesen ${data.matches_used} meccs · ${data.teams} csapat`
+        : data.new_matches > 0
+          ? `+${data.new_matches} új VB meccs · összesen ${data.matches_used} · ${data.teams} csapat`
+          : `Összesen ${data.matches_used} meccs · ${data.teams} csapat`;
+      panel.innerHTML = `<div style="background:#071a07;border:1px solid #1a3a1a;border-radius:8px;padding:12px 16px;margin-bottom:12px">
+        <div style="color:#4cff91;font-weight:700;margin-bottom:4px">✅ Corner modell betanítva!</div>
+        <div style="font-size:0.8rem;color:#aaa">${detail} · Kattints "Frissítés"-re az eredményekhez</div>
+      </div>`;
+      btn.textContent = '✅ Corner modell kész';
+    }
+  } catch(e) {
+    panel.innerHTML = `<div style="color:#ff6b6b;font-size:0.8rem;padding:8px 0">❌ Hiba: ${e.message}</div>`;
+    btn.disabled = false;
+    btn.textContent = '🧠 Corner modell tanítása';
+  }
+}
+
+// ── Cards tab ─────────────────────────────────────────────────────────────────
+
+async function retrainCards() {
+  const btn   = document.getElementById('retrain-cards-btn');
+  const panel = document.getElementById('retrain-cards-panel');
+  btn.disabled = true;
+  btn.textContent = '⏳ Tanítás folyamatban...';
+  panel.innerHTML = '<div style="color:#555;font-size:0.8rem;padding:8px 0">Historikus kártya adatok letöltése ESPN-ről (~2-3 perc)...</div>';
+  try {
+    const r = await fetch('/retrain-cards');
+    const data = await r.json();
+    if (data.status === 'error') throw new Error(data.message);
+    if (data.status === 'up_to_date') {
+      panel.innerHTML = `<div style="background:#0a0a1a;border:1px solid #2a2a4a;border-radius:8px;padding:12px 16px;margin-bottom:12px">
+        <div style="color:#f0c040;font-weight:700;margin-bottom:4px">✅ Már naprakész!</div>
+        <div style="font-size:0.8rem;color:#aaa">Nincs új meccs az utolsó tanítás óta (${data.last_trained_through}) · ${data.total_matches} meccs összesen</div>
+      </div>`;
+      btn.textContent = '✅ Naprakész';
+    } else {
+      const detail = data.is_first_run
+        ? `Első tanítás · ${data.matches_used} meccs · ${data.teams} csapat · ${data.refs} bíró · Átlag: ${data.global_avg} lap/meccs`
+        : data.new_matches > 0
+          ? `+${data.new_matches} új meccs · összesen ${data.matches_used} · ${data.teams} csapat · ${data.refs} bíró`
+          : `Összesen ${data.matches_used} meccs · ${data.teams} csapat · ${data.refs} bíró`;
+      panel.innerHTML = `<div style="background:#1a1500;border:1px solid #3a3000;border-radius:8px;padding:12px 16px;margin-bottom:12px">
+        <div style="color:#f0c040;font-weight:700;margin-bottom:4px">✅ Kártya modell betanítva!</div>
+        <div style="font-size:0.8rem;color:#aaa">${detail} · Kattints "Frissítés"-re az eredményekhez</div>
+      </div>`;
+      btn.textContent = '✅ Kártya modell kész';
+    }
+  } catch(e) {
+    panel.innerHTML = `<div style="color:#ff6b6b;font-size:0.8rem;padding:8px 0">❌ Hiba: ${e.message}</div>`;
+    btn.disabled = false;
+    btn.textContent = '🧠 Kártya modell tanítása';
+  }
+}
+
+async function loadCards() {
+  const list = document.getElementById('cards-list');
+  list.innerHTML = '<div class="empty-state">Betöltés...</div>';
+  try {
+    const r = await fetch('/tippmix-cards');
+    const matches = await r.json();
+    if (matches.error) throw new Error(matches.error);
+    if (!matches.length) {
+      list.innerHTML = '<div class="empty-state">Nincs elérhető kártya value bet jelenleg</div>';
+      return;
+    }
+    list.innerHTML = matches.map(m => {
+      const bets = (m.value_bets || []);
+      const strong = bets.filter(b => b.value);
+      const exp = m.exp_total_cards ?? '?';
+      const refInfo = m.referee
+        ? `<span style="color:#f0c040">🧑‍⚖️ ${m.referee}</span>${m.ref_known ? ` <span style="color:#4cff91;font-size:0.7rem">(ismert bíró)</span>` : ` <span style="color:#888;font-size:0.7rem">(nincs adat)</span>`}`
+        : `<span style="color:#555">🧑‍⚖️ Bíró ismeretlen</span>`;
+      const betsHtml = bets.length ? bets.map(b => `
+        <tr style="background:${b.value ? '#0d1a0d' : '#111'}">
+          <td style="padding:6px 10px;color:${b.value ? '#e8e8e8' : '#555'}">${b.market} — <b>${b.outcome}</b></td>
+          <td style="padding:6px 10px;text-align:center;font-weight:700;color:${b.value ? '#4cff91' : '#555'}">+${b.edge_pct}%</td>
+          <td style="padding:6px 10px;text-align:center;color:#e8e8e8">${b.best_odds}</td>
+          <td style="padding:6px 10px;text-align:center;color:#aaa">${b.model_prob}%</td>
+          <td style="padding:6px 10px;text-align:center;color:#aaa">${b.kelly_pct}%</td>
+        </tr>`).join('') : '<tr><td colspan="5" style="padding:10px;color:#555;text-align:center">Nincs kártya fogadási lehetőség erre a meccsre</td></tr>';
+      return `<div class="match-card" style="border-color:${strong.length ? '#3a3000' : '#1a1a2e'}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+          <div>
+            <div style="font-size:1.05rem;font-weight:700">${m.home_team_hu} vs ${m.away_team_hu}</div>
+            <div style="font-size:0.78rem;color:#555;margin-top:2px">${(m.event_date||'').slice(0,16).replace('T',' ')} · ${refInfo}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:0.85rem;color:#f0c040">🟨 Várható kártyák: <b>${exp}</b></div>
+            <div style="font-size:0.75rem;color:#555">${m.ref_factor && m.ref_factor !== 1 ? `Bíró szorzó: ${m.ref_factor}×` : ''}</div>
+          </div>
+        </div>
+        ${strong.length ? `<div style="font-size:0.75rem;color:#f0c040;margin-bottom:6px;font-weight:600">🟨 ${strong.length} value bet</div>` : ''}
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem">
+          <thead><tr style="color:#555;font-size:0.72rem">
+            <th style="padding:4px 10px;text-align:left">Piac</th>
+            <th style="padding:4px 10px">Edge</th>
+            <th style="padding:4px 10px">Odds</th>
+            <th style="padding:4px 10px">Modell</th>
+            <th style="padding:4px 10px">Kelly</th>
+          </tr></thead>
+          <tbody>${betsHtml}</tbody>
+        </table>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = `<div class="error">Hiba: ${e.message}</div>`;
+  }
+}
+
+// ── Combined tab ──────────────────────────────────────────────────────────────
+
+async function loadModelInfo() {
+  try {
+    const r = await fetch('/model-info');
+    const d = await r.json();
+    const fmt = t => t ? `<b style="color:#aaa">${t}</b>` : '<span style="color:#333">soha</span>';
+    const el = document.getElementById('model-trained-info');
+    if (el) el.innerHTML =
+      `⚽ Match Bot utoljára tanítva: ${fmt(d.match_bot?.trained_at)} &nbsp;·&nbsp; ` +
+      `📐 Corner Bot utoljára tanítva: ${fmt(d.corner_bot?.trained_at)}`;
+    const el2 = document.getElementById('corner-trained-info');
+    if (el2) el2.innerHTML = `🕐 Utoljára tanítva: ${fmt(d.corner_bot?.trained_at)}`;
+  } catch(e) {}
+}
+
+async function restartServer() {
+  if (!confirm('Biztosan újraindítod a szervert? Az oldal ~8 másodperc múlva frissül.')) return;
+  try {
+    await fetch('/restart-server');
+  } catch(e) {}
+  // Poll until server is back up, then reload
+  const poll = setInterval(async () => {
+    try {
+      const r = await fetch('/');
+      if (r.ok) { clearInterval(poll); location.reload(); }
+    } catch(e) {}
+  }, 1500);
+  setTimeout(() => clearInterval(poll), 30000);
+}
+
+async function restartTelegram() {
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Újraindítás...';
+  try {
+    const r = await fetch('/restart-telegram');
+    const d = await r.json();
+    if (d.status === 'ok') {
+      btn.textContent = '✅ Bot újraindítva';
+      setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 3000);
+    } else {
+      btn.textContent = '❌ Hiba';
+      setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 3000);
+    }
+  } catch(e) {
+    btn.textContent = '❌ Hiba';
+    setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 3000);
+  }
+}
+
+async function retrainModel() {
+  const btn = document.getElementById('retrain-btn');
+  const panel = document.getElementById('retrain-panel');
+  btn.disabled = true;
+  btn.textContent = '⏳ Tanítás folyamatban...';
+  panel.innerHTML = '<div style="color:#555;font-size:0.8rem;padding:8px 0">WC eredmények letöltése és modell újratanítása (~30-60 mp)...</div>';
+  try {
+    const _ctrl = new AbortController();
+    const _tid = setTimeout(() => _ctrl.abort(), 120000);
+    const r = await fetch('/retrain', { signal: _ctrl.signal });
+    clearTimeout(_tid);
+    const data = await r.json();
+    if (data.status === 'error') throw new Error(data.message);
+    const { matches, stats } = data;
+    const rows = matches.map(m => {
+      const d = new Date(m.date).toLocaleDateString('hu-HU', {month:'short', day:'numeric'});
+      return `<div style="font-size:0.78rem;color:#aaa;padding:3px 0;border-bottom:1px solid #111">
+        <span style="color:#e8e8e8;font-weight:600">${m.home_team_raw}</span>
+        <span style="color:#4cff91;font-weight:800;margin:0 8px">${m.home_score}–${m.away_score}</span>
+        <span style="color:#e8e8e8;font-weight:600">${m.away_team_raw}</span>
+        <span style="color:#444;margin-left:8px">${d}</span>
+      </div>`;
+    }).join('');
+    panel.innerHTML = `
+      <div style="background:#071a07;border:1px solid #1a3a1a;border-radius:8px;padding:12px 16px;margin-top:10px">
+        <div style="font-size:0.85rem;font-weight:700;color:#4cff91;margin-bottom:10px">✅ Modell frissítve! ${stats.wc_matches} VB meccs alapján (${stats.historical_matches} historikus + ${stats.wc_matches} VB)</div>
+        <div style="font-size:0.7rem;color:#555;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">VB 2026 felhasznált eredmények</div>
+        ${rows}
+      </div>`;
+    btn.textContent = '✅ Modell frissítve';
+  } catch(e) {
+    panel.innerHTML = `<div style="color:#ff6b6b;font-size:0.8rem;padding:8px 0">❌ Hiba: ${e.message}</div>`;
+    btn.disabled = false;
+    btn.textContent = '🧠 Modell tanítása';
+  }
+}
+
+// ── Prediction History ────────────────────────────────────────────────────────
+const RESULT_CFG = {
+  win:       { icon: '✅', label: 'Nyert',         color: '#4cff91', bg: '#0d2a1a' },
+  half_win:  { icon: '⚡', label: 'Fél nyeremény', color: '#a0cc60', bg: '#151f0a' },
+  push:      { icon: '🔄', label: 'Visszajár',     color: '#f0a020', bg: '#1e1500' },
+  half_loss: { icon: '⚡', label: 'Fél veszteség', color: '#ff9966', bg: '#1e0e00' },
+  loss:      { icon: '❌', label: 'Veszített',     color: '#ff6b6b', bg: '#2a0a0a' },
+  pending:   { icon: '⏳', label: 'Folyamatban',   color: '#555',    bg: 'transparent' },
+  no_data:   { icon: '—',  label: 'Nincs adat',    color: '#333',    bg: 'transparent' },
+  unknown:   { icon: '❓', label: 'Ismeretlen',    color: '#444',    bg: 'transparent' },
+};
+
+function actualStat(bet, e) {
+  // Returns the actual number/result relevant to this bet, for display next to the outcome
+  if (!e.has_result) return null;
+  const mkt  = bet.market  || '';
+  const out  = bet.outcome || '';
+  const mg   = bet.market_group || '';
+  const hs = e.home_score, as_ = e.away_score;
+  const total = hs + as_;
+  const pn = s => parseFloat(String(s).replace(',', '.'));
+
+  // Corners
+  if (mg === 'Szögletek' || mkt.toLowerCase().includes('szöglet')) {
+    if (e.home_corners == null) return 'szöglet adat nincs';
+    const tc = e.home_corners + e.away_corners;
+    if (mkt.includes('Hazai'))  return `hazai szögletek: ${e.home_corners}`;
+    if (mkt.includes('Vendég')) return `vendég szögletek: ${e.away_corners}`;
+    return `szögletek: ${tc} (${e.home_corners}+${e.away_corners})`;
+  }
+
+  // 1X2
+  if (mkt === '1X2') {
+    const who = hs > as_ ? 'hazai győzelem' : hs < as_ ? 'vendég győzelem' : 'döntetlen';
+    return `eredmény: ${hs}–${as_} (${who})`;
+  }
+
+  // DNB (Draw No Bet)
+  if (mkt.includes('Döntetlennél')) {
+    if (hs === as_) return `döntetlen → visszajár`;
+    return `eredmény: ${hs}–${as_} (${hs > as_ ? 'hazai nyert' : 'vendég nyert'})`;
+  }
+
+  // Asian Handicap — show actual goal margin
+  if (mg === 'Hendikep' || mkt.includes('Hendikep')) {
+    const m2 = out.match(/([+-]?\d+[,.]?\d*)\s*$/);
+    const isHome = e.home_team_hu && out.includes(e.home_team_hu);
+    const margin = isHome ? (hs - as_) : (as_ - hs);
+    const sign = margin > 0 ? '+' : '';
+    const hcap = m2 ? pn(m2[1]) : null;
+    const adj = hcap != null ? margin + hcap : null;
+    return `${isHome ? 'hazai' : 'vendég'} különbség: ${sign}${margin}` +
+           (adj != null ? ` (hendikep után: ${adj > 0 ? '+' : ''}${adj})` : '');
+  }
+
+  // Offside count bets ("Lesszám X")
+  if (mkt.includes('Lesszám')) {
+    if (e.home_offsides == null) return 'ofsajd adat nincs';
+    const to = e.home_offsides + e.away_offsides;
+    if (mkt.includes('Hazai'))  return `hazai lesek: ${e.home_offsides}`;
+    if (mkt.includes('Vendég')) return `vendég lesek: ${e.away_offsides}`;
+    return `lesek összesen: ${to} (${e.home_offsides}+${e.away_offsides})`;
+  }
+
+  // Total goals O/U (standard and Asian goal line)
+  if (mkt.includes('Gólszám')) {
+    return `gólok összesen: ${total}`;
+  }
+  if (out.startsWith('Több, mint ') || out.startsWith('Kevesebb, mint ')) {
+    if (mkt.includes('Hazai'))  return `hazai gólok: ${hs}`;
+    if (mkt.includes('Vendég')) return `vendég gólok: ${as_}`;
+    return `gólok összesen: ${total}`;
+  }
+
+  // BTTS
+  if (mkt.includes('Mindkét')) {
+    return hs > 0 && as_ > 0 ? 'mindkét csapat szerzett gólt' : 'nem mindkét csapat szerzett';
+  }
+
+  // Statisztika (offsides etc.) — no data yet
+  if (mg === 'Statisztika') return 'statisztika adat nincs';
+
+  return `eredmény: ${hs}–${as_}`;
+}
+
+function betRow(bet, result, e) {
+  if (!bet) return '';
+  const c = RESULT_CFG[result] || RESULT_CFG.unknown;
+  const decided = !['pending','no_data','unknown'].includes(result);
+  const borderCol = decided ? c.color + '55' : '#1a1a1a';
+  const bg = decided ? c.bg : 'transparent';
+  const stat = e ? actualStat(bet, e) : null;
+  return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:9px 12px;border-radius:8px;border:1px solid ${borderCol};background:${bg};margin-bottom:6px">
+    <div style="min-width:0;flex:1">
+      <div style="font-size:0.82rem;color:#ccc;font-weight:600">${bet.market}</div>
+      <div style="font-size:0.9rem;color:#fff;font-weight:800;margin-top:1px">${bet.outcome}</div>
+      <div style="font-size:0.7rem;color:#444;margin-top:2px">odds <b style="color:#666">${bet.best_odds}</b> &nbsp;|&nbsp; edge <b style="color:#666">+${bet.edge_pct}%</b></div>
+    </div>
+    <div style="text-align:right;flex-shrink:0">
+      <div style="font-size:1rem;font-weight:800;color:${c.color};white-space:nowrap">${c.icon} ${c.label}</div>
+      ${stat ? `<div style="font-size:0.72rem;color:${c.color}99;margin-top:3px">${stat}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+async function loadHistory() {
+  const list = document.getElementById('history-list');
+  const summ = document.getElementById('history-summary');
+  list.innerHTML = '<div style="color:#555;padding:24px 0">Eredmények frissítése (ESPN)...</div>';
+  try {
+    await fetch('/refresh-results');  // update scores cache silently
+    const r = await fetch('/prediction-history');
+    const data = await r.json();
+    if (data.error) { list.innerHTML = `<div class="error">${data.error}</div>`; return; }
+    renderHistory(data);
+  } catch(e) {
+    list.innerHTML = `<div class="error">Hiba: ${e.message}</div>`;
+  }
+}
+
+function renderHistory(data) {
+  const list = document.getElementById('history-list');
+  const summ = document.getElementById('history-summary');
+
+  if (!data.length) {
+    summ.innerHTML = '';
+    list.innerHTML = '<div class="empty-state">Még nincs naplózott előrejelzés.<br><span style="font-size:0.8rem;color:#444;margin-top:8px;display:block">Az előrejelzések automatikusan mentődnek, amikor a Telegram bot küld üzenetet.</span></div>';
+    return;
+  }
+
+  // Summary stats (only decided bets)
+  let wins = 0, halfWins = 0, pushes = 0, halfLosses = 0, losses = 0, pending = 0;
+  data.forEach(e => {
+    [e.primary_result, e.secondary_result, e.corner_result].forEach(r => {
+      if (!r || r === 'no_data' || r === 'unknown' || r === null) return;
+      if (r === 'win')       wins++;
+      else if (r === 'half_win')  halfWins++;
+      else if (r === 'push')      pushes++;
+      else if (r === 'half_loss') halfLosses++;
+      else if (r === 'loss')      losses++;
+      else if (r === 'pending')   pending++;
+    });
+  });
+  const decided = wins + halfWins + pushes + halfLosses + losses;
+  const winPct = decided ? Math.round((wins + halfWins * 0.5) / decided * 100) : null;
+
+  summ.innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap;padding:12px 16px;background:#0d0d0f;border:1px solid #1a2a1a;border-radius:10px;font-size:0.8rem">
+    <span style="color:#4cff91;font-weight:700">✅ ${wins} nyert</span>
+    <span style="color:#a0cc60">⚡ ${halfWins} fél nyeremény</span>
+    <span style="color:#f0a020">🔄 ${pushes} visszajár</span>
+    <span style="color:#ff9966">⚡ ${halfLosses} fél veszteség</span>
+    <span style="color:#ff6b6b">❌ ${losses} veszített</span>
+    <span style="color:#555">⏳ ${pending} folyamatban</span>
+    ${winPct !== null ? `<span style="margin-left:auto;color:#fff;font-weight:700">Találati arány: <span style="color:#4cff91">${winPct}%</span></span>` : ''}
+  </div>`;
+
+  list.innerHTML = '';
+  data.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'match-row';
+    const hf = flagImg(e.home_team_hu), af = flagImg(e.away_team_hu);
+    const dt = e.match_date ? new Date(e.match_date + 'T12:00:00').toLocaleDateString('hu-HU', {month:'short',day:'numeric'}) : '';
+    const loggedAt = e.logged_at ? e.logged_at.replace('T',' ').slice(0,16) : '';
+
+    // Actual corner count for corner bet right-side note
+    const totalCorners = (e.home_corners != null && e.away_corners != null)
+      ? `Tényleges szögletek: ${e.home_corners + e.away_corners} (${e.home_corners}+${e.away_corners})`
+      : (e.corner_result === 'no_data' ? 'Szöglet adat nem elérhető' : null);
+
+    // Score shown small in header only if result known
+    const scoreChip = e.has_result
+      ? `<span style="font-size:0.78rem;color:#666;background:#111;border:1px solid #222;border-radius:6px;padding:3px 10px;white-space:nowrap">${e.home_score}–${e.away_score}</span>`
+      : `<span style="font-size:0.72rem;color:#333">⏳ folyamatban</span>`;
+
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div>
+          <div class="match-teams">${hf}${e.home_team_hu} vs ${af}${e.away_team_hu}</div>
+          <div style="font-size:0.72rem;color:#444;margin-top:2px">${dt}${loggedAt ? ` &nbsp;·&nbsp; tipp: ${loggedAt}` : ''}</div>
+        </div>
+        ${scoreChip}
+      </div>
+      <div>
+        ${e.primary_goal   ? betRow(e.primary_goal,   e.primary_result,   e) : ''}
+        ${e.secondary_goal ? betRow(e.secondary_goal, e.secondary_result, e) : ''}
+        ${e.best_corner    ? betRow(e.best_corner,    e.corner_result,    e) : ''}
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadTippmix();
+loadModelInfo();

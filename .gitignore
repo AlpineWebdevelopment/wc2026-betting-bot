@@ -1,6 +1,17 @@
+# Python (legacy)
 __pycache__/
 *.py[cod]
 *.pyo
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.vercel
+
+# Env
 .env
 .env.local
 results_cache.csv
