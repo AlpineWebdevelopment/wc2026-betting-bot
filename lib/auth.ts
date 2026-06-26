@@ -12,9 +12,9 @@
 
 export const AUTH_COOKIE = "wc_auth";
 
-const AUTH_USER = process.env.AUTH_USER ?? "admin";
-const AUTH_PASS = process.env.AUTH_PASS ?? "wc2026";
-const AUTH_SECRET = process.env.AUTH_SECRET ?? "wc2026-default-secret-change-me";
+const AUTH_USER = process.env.AUTH_USER;
+const AUTH_PASS = process.env.AUTH_PASS;
+const AUTH_SECRET = process.env.AUTH_SECRET;
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
