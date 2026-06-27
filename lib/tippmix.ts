@@ -262,8 +262,22 @@ async function fetchEventsList(): Promise<any | null> {
         cache: "no-store",
         signal: AbortSignal.timeout(20000),
       }));
-      if (r.status === 200) return await r.json();
-      console.log(`  [tippmix] ${path} -> HTTP ${r.status}`);
+      const body = await r.text();
+      if (r.status === 200) {
+        try {
+          return JSON.parse(body);
+        } catch {
+          // 200 but HTML → a block / anti-bot challenge page, not real data.
+          const server = r.headers.get("server") ?? "?";
+          const snippet = body.slice(0, 160).replace(/\s+/g, " ");
+          console.log(
+            `  [tippmix] ${path} -> HTTP 200 non-JSON (server=${server}, ${body.length}b): ${snippet}`
+          );
+          continue;
+        }
+      }
+      const snippet = body.slice(0, 160).replace(/\s+/g, " ");
+      console.log(`  [tippmix] ${path} -> HTTP ${r.status}: ${snippet}`);
     } catch (e) {
       console.log(`  [tippmix] ${path} fetch error: ${e}`);
       continue;
