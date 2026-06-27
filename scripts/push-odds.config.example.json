@@ -1,0 +1,4 @@
+{
+  "INGEST_URL": "https://your-app.vercel.app/api/ingest-tippmix",
+  "INGEST_TOKEN": "replace-with-a-long-random-secret"
+}

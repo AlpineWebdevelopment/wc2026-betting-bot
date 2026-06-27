@@ -2,9 +2,24 @@
  * Tippmix.hu odds fetcher — port of tippmix.py.
  * Calls the public tippmix.hu JSON API directly via fetch (no browser).
  */
+import { ProxyAgent } from "undici";
 import type { MarketGroup } from "@/lib/valuebets";
 
 const API_BASE = "https://api.tippmix.hu";
+
+// tippmix.hu geo-blocks non-Hungarian IPs. On Vercel (US/EU datacenters) the
+// requests are refused, so route them through a Hungarian-exit proxy when
+// TIPPMIX_PROXY_URL is set (e.g. "http://user:pass@hu-proxy.example.com:8080").
+// Inert locally / when unset — falls back to a direct connection.
+const PROXY_URL = process.env.TIPPMIX_PROXY_URL;
+const proxyDispatcher = PROXY_URL ? new ProxyAgent(PROXY_URL) : undefined;
+
+/** Merge the proxy dispatcher into fetch options when a proxy is configured. */
+function withProxy(init: RequestInit): RequestInit {
+  return proxyDispatcher
+    ? ({ ...init, dispatcher: proxyDispatcher } as RequestInit)
+    : init;
+}
 
 const HEADERS: Record<string, string> = {
   Accept: "application/json, text/plain, */*",
@@ -224,11 +239,11 @@ function parseLiveEvents(data: any): TippmixMatch[] {
 
 async function fetchEventMarkets(eventId: number): Promise<MarketGroup[]> {
   try {
-    const r = await fetch(`${API_BASE}/v2/tippmix/event/${eventId}`, {
+    const r = await fetch(`${API_BASE}/v2/tippmix/event/${eventId}`, withProxy({
       headers: HEADERS,
       cache: "no-store",
       signal: AbortSignal.timeout(20000),
-    });
+    }));
     if (!r.ok) return [];
     const j = await r.json();
     return j?.event?.marketGroups ?? [];
@@ -240,15 +255,17 @@ async function fetchEventMarkets(eventId: number): Promise<MarketGroup[]> {
 async function fetchEventsList(): Promise<any | null> {
   for (const path of ["/tippmix/best-games", "/tippmix/last-minute"]) {
     try {
-      const r = await fetch(`${API_BASE}${path}`, {
+      const r = await fetch(`${API_BASE}${path}`, withProxy({
         method: "POST",
         headers: HEADERS,
         body: "{}",
         cache: "no-store",
         signal: AbortSignal.timeout(20000),
-      });
+      }));
       if (r.status === 200) return await r.json();
-    } catch {
+      console.log(`  [tippmix] ${path} -> HTTP ${r.status}`);
+    } catch (e) {
+      console.log(`  [tippmix] ${path} fetch error: ${e}`);
       continue;
     }
   }

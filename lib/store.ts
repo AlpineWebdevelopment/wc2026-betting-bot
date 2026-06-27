@@ -4,11 +4,18 @@
  */
 import { THE_ODDS_API_KEY } from "@/lib/config";
 import { getWcOdds, type OddsMatch } from "@/lib/odds";
+import { kvEnabled, kvGetJson } from "@/lib/kv";
 import {
   getTippmixLiveOdds,
   getTippmixMatches,
   type TippmixMatch,
 } from "@/lib/tippmix";
+
+// Shape stored in KV by /api/ingest-tippmix (the Hungarian push-relay).
+interface PushedOdds {
+  data: TippmixMatch[];
+  ts: number;
+}
 
 // ── Pre-match odds (The Odds API) ────────────────────────────────────────────
 let _liveOdds: Record<string, OddsMatch> = {};
@@ -42,6 +49,13 @@ let _prematchTs = 0;
 const PREMATCH_TTL = 300_000; // 5 minutes
 
 export async function getTippmixPrematchCached(): Promise<TippmixMatch[]> {
+  // Prefer odds pushed by the Hungarian relay (bypasses the tippmix.hu geo-block
+  // on Vercel). Falls through to a direct fetch locally / when KV is unset.
+  if (kvEnabled) {
+    const pushed = await kvGetJson<PushedOdds>("tippmix:prematch");
+    if (pushed?.data) return [...pushed.data];
+  }
+
   const now = Date.now();
   if (!_prematchTs || now - _prematchTs > PREMATCH_TTL) {
     _prematchCache = await getTippmixMatches();
@@ -60,6 +74,15 @@ export async function getTippmixLiveCached(): Promise<{
   data: TippmixMatch[];
   age: number | null;
 }> {
+  // Prefer live odds pushed by the Hungarian relay; report the snapshot's age.
+  if (kvEnabled) {
+    const pushed = await kvGetJson<PushedOdds>("tippmix:live");
+    if (pushed?.data) {
+      const age = pushed.ts ? Math.round((Date.now() - pushed.ts) / 1000) : null;
+      return { data: [...pushed.data], age };
+    }
+  }
+
   const now = Date.now();
   let age: number | null = _tippmixLiveTs
     ? Math.round((now - _tippmixLiveTs) / 1000)

@@ -14,6 +14,7 @@ next-env.d.ts
 # Env
 .env
 .env.local
+scripts/push-odds.config.json
 results_cache.csv
 probe_*.html
 probe_*.png
