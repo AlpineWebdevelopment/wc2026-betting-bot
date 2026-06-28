@@ -53,7 +53,20 @@ export async function getTippmixPrematchCached(): Promise<TippmixMatch[]> {
   // on Vercel). Falls through to a direct fetch locally / when KV is unset.
   if (kvEnabled) {
     const pushed = await kvGetJson<PushedOdds>("tippmix:prematch");
-    if (pushed?.data) return [...pushed.data];
+    if (pushed?.data?.length) {
+      const age = pushed.ts ? Math.round((Date.now() - pushed.ts) / 1000) : null;
+      console.log(
+        `  [store] serving pushed prematch from KV: ${pushed.data.length} matches, age ${age}s`
+      );
+      return [...pushed.data];
+    }
+    console.log(
+      "  [store] KV configured but no 'tippmix:prematch' data — relay hasn't pushed (check push script HTTP status / INGEST_TOKEN). Falling back to direct fetch."
+    );
+  } else {
+    console.log(
+      "  [store] KV NOT configured (KV_REST_API_URL/TOKEN missing) — using direct fetch, which is geo-blocked on Vercel."
+    );
   }
 
   const now = Date.now();

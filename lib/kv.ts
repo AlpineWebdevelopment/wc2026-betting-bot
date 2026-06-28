@@ -11,8 +11,12 @@
  * (KV_REST_API_URL / KV_REST_API_TOKEN). No-ops gracefully when unset, so
  * local dev keeps working via the direct fetch fallback in lib/store.ts.
  */
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+// Accept either the legacy Vercel KV names or the Upstash-for-Redis Marketplace
+// names — depending on how the store was provisioned, Vercel injects one pair.
+const KV_URL =
+  process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
+const KV_TOKEN =
+  process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
 
 export const kvEnabled = Boolean(KV_URL && KV_TOKEN);
 
