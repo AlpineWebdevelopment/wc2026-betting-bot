@@ -3,13 +3,14 @@ import type { NextRequest } from "next/server";
 import { AUTH_COOKIE, isTokenValid } from "@/lib/auth";
 
 // Paths that must stay reachable without a session.
-// /api/ingest-tippmix has its own INGEST_TOKEN Bearer auth (the Hungarian
-// push-relay posts to it), so it bypasses the session cookie but is not open.
+// The /api/ingest-* routes have their own INGEST_TOKEN Bearer auth (the home
+// push-relay posts to them), so they bypass the session cookie but are not open.
 const PUBLIC_PATHS = [
   "/login",
   "/api/login",
   "/api/logout",
   "/api/ingest-tippmix",
+  "/api/ingest-results",
 ];
 
 export async function middleware(req: NextRequest) {

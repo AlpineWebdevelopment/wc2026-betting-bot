@@ -74,8 +74,13 @@ class PoissonModel:
             return -(np.sum(ll) - penalty)
 
         print(f"  Fitting model on {len(df):,} matches for {n} teams...")
+        # maxfun (not maxiter) is the binding limit here: the gradient is
+        # numerical, so each iteration costs ~2n+2 function evaluations. With
+        # 260 teams that's ~520 per iteration, and the 15000 default aborts the
+        # fit after ~28 iterations. Give it room to actually converge.
         res = minimize(neg_ll, x0, method="L-BFGS-B",
-                       options={"maxiter": 5000, "ftol": 1e-8, "gtol": 1e-6})
+                       options={"maxiter": 5000, "maxfun": 5_000_000,
+                                "ftol": 1e-8, "gtol": 1e-6})
         self.params = res.x
 
         n = len(self.teams)

@@ -63,6 +63,39 @@ Create a task that runs every ~3 minutes:
 The app serves the **last pushed snapshot**, so freshness depends on this task
 running. The live route reports the snapshot age (`tippmix_cache_age`).
 
+## Keeping the model current (results + retrain)
+
+Odds are only half the picture. The Poisson model is **baked into the deploy**:
+`lib/model.ts` statically imports `model_params.json` at build time, so the
+ratings never change until you rebuild. During the tournament that means
+predictions drift out of date as group results come in.
+
+The refresh cycle, run at home:
+
+```
+python retrain.py        # ESPN → wc_results_cache.json, refits model_params.json
+npm run push:results     # pushes results + prediction log to KV (History tab)
+git commit -am "retrain" && git push   # new model_params.json → Vercel rebuild
+```
+
+`retrain.py` re-fetches the last 3 days each run (matches finishing late US time
+land the next morning in Europe) and weights WC 2026 results 5× the historical
+baseline. A daily run is plenty — the ratings barely move inside one match day.
+
+The results push and the model deploy are independent: `push:results` updates
+the History tab within seconds, while new ratings need the redeploy.
+
+### Schedule it
+
+A second Task Scheduler entry, daily rather than every 3 minutes:
+
+- **Program/script:** `cmd.exe`
+- **Arguments:** `/c python retrain.py && npm run push:results`
+- **Start in:** the project folder
+- Trigger: daily, early morning (after the previous day's matches have settled).
+
+Leave the `git push` manual — you probably don't want an unattended deploy.
+
 ## How it fits together
 
 - `scripts/push-odds.ts` — fetches via `lib/tippmix.ts` (identical payload shape),
@@ -71,6 +104,13 @@ running. The live route reports the snapshot age (`tippmix_cache_age`).
   and `tippmix:live` to KV.
 - `lib/store.ts` — read routes prefer the KV snapshot; fall back to a direct
   fetch when KV is unset (local dev still works with no setup).
+- `scripts/push-results.ts` — reads `wc_results_cache.json` and
+  `predictions_log.json` from disk, POSTs them as `{ files: {...} }`.
+- `app/api/ingest-results/route.ts` — same token, writes `file:<name>` keys to
+  KV (allowlisted filenames only).
+- `lib/datafiles.ts` — `readJsonFile()` prefers the KV copy, falls back to disk,
+  then to a safe default. `/prediction-history`, `/tippmix-cards` and
+  `/refresh-results` all read through it, so they pick this up automatically.
 
 ## Fallback: proxy instead of relay
 

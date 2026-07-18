@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "next lint",
-    "push:odds": "tsx scripts/push-odds.ts"
+    "push:odds": "tsx scripts/push-odds.ts",
+    "push:results": "tsx scripts/push-results.ts"
   },
   "dependencies": {
     "next": "^14.2.35",
